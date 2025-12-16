@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>自動安全警示車 - 監控系統</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBoeqea_L26sjrYdzsZLRY5bkp0qr50zdw&callback=initMap" async defer></script>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="bg-gray-50">
+    <!-- 登入模態框 -->
+    <div id="loginModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+        <div class="bg-white rounded-2xl shadow-2xl p-8 w-96">
+            <h2 class="text-2xl font-semibold mb-6 text-gray-800">管理員登入</h2>
+            <form id="loginForm">
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">使用者名稱</label>
+                    <input type="text" id="username" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" required>
+                </div>
+                <div class="mb-6">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">密碼</label>
+                    <input type="password" id="password" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" required>
+                </div>
+                <button type="submit" class="btn-primary w-full">登入</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- 主容器 -->
+    <div class="flex h-screen">
+        <!-- 左側：地圖區域 -->
+        <div class="w-1/2 bg-white border-r border-gray-200">
+            <div class="h-full relative">
+                <div id="map" class="w-full h-full"></div>
+                <!-- 地圖控制面板 -->
+                <div class="absolute top-4 left-4 bg-white rounded-lg shadow-lg p-4 z-10">
+                    <h3 class="text-lg font-semibold mb-2 text-gray-800">事故監控</h3>
+                    <div class="text-sm text-gray-600">
+                        <div>活動事故: <span id="activeAccidentsCount">0</span></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 右側：事件與監控區域 -->
+        <div class="w-1/2 flex flex-col">
+            <!-- 頂部工具列 -->
+            <div class="bg-white border-b border-gray-200 p-4 flex items-center justify-between">
+                <h1 class="text-2xl font-bold text-gray-800">安全警示系統</h1>
+                <div class="flex items-center space-x-4">
+                    <!-- 管理員開關（僅管理員可見） -->
+                    <div id="adminControls" class="hidden flex items-center space-x-2">
+                        <label class="text-sm font-medium text-gray-700">顯示偵測框</label>
+                        <label class="relative inline-flex items-center cursor-pointer">
+                            <input type="checkbox" id="overlayToggle" class="sr-only peer">
+                            <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                        </label>
+                    </div>
+                    <!-- 登入按鈕 -->
+                    <button id="loginBtn" class="btn-primary">管理員登入</button>
+                    <!-- 登出按鈕（僅管理員可見） -->
+                    <button id="logoutBtn" class="btn-secondary hidden">登出</button>
+                </div>
+            </div>
+
+            <!-- 事件列表 -->
+            <div class="flex-1 overflow-y-auto bg-gray-50 p-4">
+                <h2 class="text-xl font-semibold mb-4 text-gray-800">事故列表</h2>
+                <div id="accidentsList" class="space-y-3">
+                    <!-- 事故項目將動態載入 -->
+                </div>
+            </div>
+
+            <!-- 即時影像區域 -->
+            <div class="bg-white border-t border-gray-200 p-4">
+                <h2 class="text-xl font-semibold mb-4 text-gray-800">即時監控</h2>
+                <div class="bg-gray-900 rounded-lg overflow-hidden aspect-video flex items-center justify-center">
+                    <img id="videoStream" src="" alt="即時影像" class="w-full h-full object-contain hidden">
+                    <div id="videoPlaceholder" class="text-gray-400">等待連接影像串流...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
+

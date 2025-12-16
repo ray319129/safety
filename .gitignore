@@ -1,0 +1,48 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+ENV/
+.venv
+
+# 環境變數
+.env
+.env.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# 日誌
+*.log
+logs/
+
+# 資料庫
+*.db
+*.sqlite
+
+# 系統檔案
+.DS_Store
+Thumbs.db
+
+# 編譯檔案
+*.o
+*.pyc
+
+# 測試
+.pytest_cache/
+.coverage
+
+# Ngrok
+ngrok.log
+
+# 臨時檔案
+*.tmp
+*.bak
+
