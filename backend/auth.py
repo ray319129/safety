@@ -6,6 +6,7 @@
 import jwt
 import time
 from functools import wraps
+from typing import Optional
 from flask import request, jsonify
 import sys
 import os

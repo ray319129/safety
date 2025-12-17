@@ -216,6 +216,31 @@ def api_health():
     """
     return jsonify({'status': 'ok'}), 200
 
+@app.route('/', methods=['GET'])
+def index():
+    """
+    根路徑 - API 資訊頁面
+    
+    Returns:
+        API 資訊 JSON
+    """
+    return jsonify({
+        'name': '自動安全警示車後端 API',
+        'version': '1.0.0',
+        'status': 'running',
+        'endpoints': {
+            'health': '/api/health',
+            'login': '/api/login',
+            'report_accident': '/api/report_accident',
+            'get_accidents': '/api/get_accidents',
+            'delete_accident': '/api/delete_accident/<id>',
+            'video_stream': '/api/video/<device_id>',
+            'update_device': '/api/update_device'
+        },
+        'documentation': '/docs/api.md',
+        'message': '請使用 /api/* 端點訪問 API 功能'
+    }), 200
+
 if __name__ == '__main__':
     print(f"啟動 Flask 後端伺服器: http://{config.FLASK_HOST}:{config.FLASK_PORT}")
     app.run(host=config.FLASK_HOST, port=config.FLASK_PORT, debug=config.FLASK_DEBUG)
