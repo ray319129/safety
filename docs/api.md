@@ -52,7 +52,8 @@
   "longitude": 121.5654,
   "timestamp": 1234567890,
   "image": "base64_encoded_image_string",
-  "device_id": "vehicle_001"
+  "device_id": "vehicle_001",
+  "injured_count": 1
 }
 ```
 
@@ -258,6 +259,7 @@ GET /api/video/vehicle_001?overlay=true
   "timestamp": 1234567890,
   "image": "base64_encoded_string",
   "device_id": "vehicle_001",
+  "injured_count": 1,
   "status": "active",
   "created_at": 1234567890,
   "updated_at": 1234567890

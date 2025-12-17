@@ -9,6 +9,7 @@ import signal
 import requests
 import base64
 import cv2
+import threading
 from typing import Optional, Tuple
 
 from config import VehicleConfig
@@ -17,6 +18,7 @@ from vision_module import VisionModule
 from motor_controller import MotorController
 from servo_controller import ServoController
 from alarm import AlarmModule
+from web_api import run_web_api
 
 class SafetyVehicle:
     """自動安全警示車主類別"""
@@ -137,15 +139,33 @@ class SafetyVehicle:
             return False
         
         # 馬達控制器已在 __init__ 中初始化
-        print("\n[3/5] 馬達控制器已就緒")
+        print("\n[3/6] 馬達控制器已就緒")
         
         # 伺服控制器已在 __init__ 中初始化
-        print("\n[4/5] 伺服控制器已就緒")
+        print("\n[4/6] 伺服控制器已就緒")
         
         # 警示音模組已在 __init__ 中初始化
-        print("\n[5/5] 警示音模組已就緒")
+        print("\n[5/6] 警示音模組已就緒")
+        
+        # 啟動 Web API 伺服器（在背景執行緒中）
+        print("\n[6/6] 啟動 Web API 伺服器...")
+        try:
+            # 將 vision 實例傳給 web_api
+            from web_api import set_vision_instance
+            set_vision_instance(self.vision)
+            
+            self.web_api_thread = threading.Thread(
+                target=run_web_api,
+                args=(self.config.WEB_API_HOST, self.config.WEB_API_PORT, False),
+                daemon=True
+            )
+            self.web_api_thread.start()
+            print(f"Web API 伺服器已啟動: http://{self.config.WEB_API_HOST}:{self.config.WEB_API_PORT}")
+        except Exception as e:
+            print(f"警告: Web API 伺服器啟動失敗: {e}")
         
         print("\n系統初始化完成！")
+        self.running = True
         return True
     
     def set_accident_location(self) -> bool:
@@ -179,7 +199,7 @@ class SafetyVehicle:
             self.gps.last_position = (25.0330, 121.5654)
             return True
     
-    def report_accident(self) -> bool:
+    def report_accident(self, injured_count: int = 0) -> bool:
         """
         上報事故資料到後端
         
@@ -207,7 +227,9 @@ class SafetyVehicle:
             'longitude': position[1],
             'timestamp': time.time(),
             'image': image_data,
-            'device_id': 'vehicle_001'
+            'device_id': 'vehicle_001',
+            # 受傷人數（由視覺模組偵測到的人形數量）
+            'injured_count': max(0, int(injured_count))
         }
         
         try:
@@ -314,33 +336,30 @@ class SafetyVehicle:
                 print("無法設定事故位置")
                 return
             
-            # 3. 判斷目標距離
-            self.target_distance = self.determine_target_distance(speed_limit)
-            print(f"\n目標移動距離: {self.target_distance} 公尺")
+            # 3. 程式啟動後立即上報一次事故（受傷人數 0）
+            print("\n程式啟動，立即上報初始事故（injured_count=0）...")
+            self.report_accident(injured_count=0)
             
-            # 4. 開始移動（包含避障）
-            self.run_movement_loop()
+            # 4. 進入偵測人形的監控迴圈
+            print("\n開始人體偵測監控，偵測到人時會再次上報事故...")
+            self.running = True
+            last_report_time = 0.0
+            report_interval = 10.0  # 至少間隔 10 秒再上報一次，避免過於頻繁
             
-            # 5. 升起警示牌
-            print("\n升起警示牌...")
-            self.servo.raise_sign()
-            
-            # 6. 播放警示音
-            print("\n播放警示音...")
-            self.alarm.play_alarm_loop(times=3, interval=1.0)
-            
-            # 7. 上報事故資料
-            print("\n上報事故資料...")
-            self.report_accident()
-            
-            # 8. 開始即時影像串流（由 web_api.py 處理）
-            print("\n系統已就緒，等待後端連接...")
-            print("即時影像串流將由後端 API 提供")
-            
-            # 保持運行狀態
-            print("\n系統運行中，按 Ctrl+C 停止...")
             while self.running:
-                time.sleep(1)
+                frame = self.vision.get_frame()
+                if frame is not None:
+                    # 這裡暫時沿用現有障礙物偵測作為「人形數量」的近似
+                    obstacles = self.vision.detect_obstacles(frame)
+                    injured_count = len(obstacles)
+                    
+                    if injured_count > 0:
+                        now = time.time()
+                        if now - last_report_time >= report_interval:
+                            print(f\"偵測到疑似人形 {injured_count} 個，進行事故上報...\")
+                            self.report_accident(injured_count=injured_count)
+                            last_report_time = now
+                time.sleep(0.2)
                 
         except KeyboardInterrupt:
             print("\n使用者中斷")
@@ -362,12 +381,19 @@ class SafetyVehicle:
         # 降下警示牌
         self.servo.lower_sign()
         
-        # 清理各模組
+        # 清理各模組（不調用 GPIO.cleanup，統一在最後清理）
         self.vision.release_camera()
         self.gps.disconnect()
         self.motor.cleanup()
         self.servo.cleanup()
         self.alarm.cleanup()
+        
+        # 統一清理 GPIO（在所有模組清理完成後）
+        try:
+            import RPi.GPIO as GPIO
+            GPIO.cleanup()
+        except Exception:
+            pass
         
         print("系統已關閉")
 

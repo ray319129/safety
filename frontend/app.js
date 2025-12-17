@@ -231,6 +231,7 @@ function displayAccidents(accidents) {
                             <div>時間: ${dateStr}</div>
                             <div>位置: ${accident.latitude.toFixed(6)}, ${accident.longitude.toFixed(6)}</div>
                             <div>裝置: ${accident.device_id || 'N/A'}</div>
+                            <div>受傷人數: ${(accident.injured_count ?? 0)} 人</div>
                         </div>
                     </div>
                     ${isAdmin ? `
@@ -320,6 +321,7 @@ function updateMapMarkers(accidents) {
                 <h3 style="margin: 0 0 8px 0; font-weight: bold;">事故 #${accident._id.slice(-6)}</h3>
                 <p style="margin: 4px 0; font-size: 12px;">時間: ${new Date(accident.timestamp * 1000).toLocaleString('zh-TW')}</p>
                 <p style="margin: 4px 0; font-size: 12px;">裝置: ${accident.device_id || 'N/A'}</p>
+                <p style="margin: 4px 0; font-size: 12px;">受傷人數: ${(accident.injured_count ?? 0)} 人</p>
             </div>
         `);
 

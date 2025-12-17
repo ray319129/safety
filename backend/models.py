@@ -70,6 +70,8 @@ class AccidentModel:
             'timestamp': datetime.fromtimestamp(accident_data.get('timestamp', datetime.now().timestamp())),
             'image': accident_data.get('image', ''),
             'device_id': accident_data.get('device_id', ''),
+            # 新增受傷人數欄位，預設為 0，確保向後相容
+            'injured_count': accident_data.get('injured_count', 0),
             'status': 'active',
             'created_at': datetime.now(),
             'updated_at': datetime.now()
