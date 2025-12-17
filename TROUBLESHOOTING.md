@@ -316,23 +316,38 @@ ModuleNotFoundError: No module named 'xxx'
 
 ### 問題：版本不相容
 
+**錯誤訊息：**
+```
+AttributeError: module 'pkgutil' has no attribute 'ImpImporter'
+ERROR: Failed to build 'numpy'
+```
+
+**原因：** Python 3.13 是較新版本，舊版本的 numpy (如 1.24.3) 不相容。
+
 **解決方法：**
 
 1. **檢查 Python 版本**
    ```bash
    python3 --version
-   # 應該 >= 3.8
+   # Python 3.13 需要 numpy >= 1.26.0
    ```
 
-2. **更新 pip**
+2. **更新 requirements.txt**
+   - 已更新為使用相容版本：`numpy>=1.26.0`
+   - 重新執行安裝腳本
+
+3. **手動安裝相容版本**
    ```bash
-   python3 -m pip install --upgrade pip
+   source venv/bin/activate
+   pip install --upgrade pip setuptools wheel
+   pip install numpy>=1.26.0
+   pip install -r requirements.txt
    ```
 
-3. **使用較新版本的套件**
+4. **如果仍有問題，使用預編譯的 wheel**
    ```bash
-   # 移除版本限制，使用最新版本
-   pip install package_name --upgrade
+   # 樹莓派可以使用 piwheels 預編譯套件
+   pip install --only-binary :all: numpy opencv-python
    ```
 
 ## 取得協助
