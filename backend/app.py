@@ -20,6 +20,15 @@ config = BackendConfig()
 # 設定 CORS
 CORS(app, origins=config.CORS_ORIGINS)
 
+# 全域錯誤處理器
+@app.errorhandler(Exception)
+def handle_exception(e):
+    """處理所有未捕獲的異常，確保返回 JSON"""
+    print(f'未處理的異常: {e}')
+    import traceback
+    traceback.print_exc()
+    return jsonify({'error': f'伺服器錯誤: {str(e)}'}), 500
+
 @app.route('/api/login', methods=['POST'])
 def api_login():
     """
