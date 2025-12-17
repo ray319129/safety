@@ -16,48 +16,72 @@ let isAdmin = false;
 let adminToken = null;
 let videoStreamInterval = null;
 
+// 地圖準備就緒的回調
+window.onMapReady = function() {
+    console.log('地圖已準備就緒，開始載入資料...');
+    loadAccidents();
+    startVideoStream();
+    setInterval(loadAccidents, CONFIG.UPDATE_INTERVAL);
+};
+
 // 初始化
 document.addEventListener('DOMContentLoaded', () => {
     console.log('前端初始化中...');
     console.log('API URL:', CONFIG.API_URL);
     
-    // 等待 Google Maps API 載入完成
-    if (typeof google !== 'undefined' && typeof google.maps !== 'undefined') {
-        initMap();
-    } else {
-        // 如果 API 尚未載入，等待載入完成
-        window.initMap = function() {
-            initMap();
-            loadAccidents();
-            setupEventListeners();
-            startVideoStream();
-            setInterval(loadAccidents, CONFIG.UPDATE_INTERVAL);
-        };
-    }
-    
-    // 即使 Maps 尚未載入，也先設定其他功能
+    // 設定事件監聽器（不依賴地圖）
     setupEventListeners();
     
-    // 如果 Maps 已載入，執行完整初始化
-    if (typeof google !== 'undefined' && typeof google.maps !== 'undefined') {
-        loadAccidents();
-        startVideoStream();
-        setInterval(loadAccidents, CONFIG.UPDATE_INTERVAL);
+    // 檢查 Google Maps API 是否已經載入
+    if (typeof google !== 'undefined' && typeof google.maps !== 'undefined' && typeof google.maps.Map !== 'undefined') {
+        console.log('Google Maps API 已載入，立即初始化地圖');
+        initMap();
+    } else {
+        console.log('等待 Google Maps API 載入...');
+        // initMap 會由 Google Maps API 的 callback 參數自動調用
+        // 如果 API 已經載入但 callback 還沒執行，手動調用
+        let checkCount = 0;
+        const checkInterval = setInterval(() => {
+            checkCount++;
+            if (typeof google !== 'undefined' && typeof google.maps !== 'undefined' && typeof google.maps.Map !== 'undefined') {
+                console.log('檢測到 Google Maps API 已載入，初始化地圖');
+                clearInterval(checkInterval);
+                if (!map) {
+                    initMap();
+                }
+            } else if (checkCount > 50) {
+                // 10 秒後停止檢查
+                console.error('Google Maps API 載入超時');
+                clearInterval(checkInterval);
+            }
+        }, 200);
     }
 });
 
-// 初始化 Google Maps
+// 初始化 Google Maps（由 Google Maps API 回調函數調用）
 function initMap() {
-    // 檢查 Google Maps API 是否已載入
-    if (typeof google === 'undefined' || typeof google.maps === 'undefined') {
-        console.error('Google Maps API 尚未載入，請稍候...');
+    console.log('initMap 被調用');
+    console.log('google 物件:', typeof google);
+    console.log('google.maps 物件:', typeof google?.maps);
+    console.log('google.maps.Map:', typeof google?.maps?.Map);
+    
+    // 檢查 Google Maps API 是否已完全載入
+    if (typeof google === 'undefined' || typeof google.maps === 'undefined' || typeof google.maps.Map === 'undefined') {
+        console.error('Google Maps API 尚未完全載入，請稍候...');
         // 如果 API 尚未載入，等待一段時間後重試
-        setTimeout(initMap, 100);
+        setTimeout(initMap, 200);
+        return;
+    }
+    
+    // 檢查地圖容器是否存在
+    const mapElement = document.getElementById('map');
+    if (!mapElement) {
+        console.error('找不到地圖容器元素 #map');
         return;
     }
     
     try {
-        map = new google.maps.Map(document.getElementById('map'), {
+        map = new google.maps.Map(mapElement, {
             center: CONFIG.MAP_CENTER,
             zoom: CONFIG.MAP_ZOOM,
             styles: [
@@ -79,8 +103,14 @@ function initMap() {
             ]
         });
         console.log('Google Maps 初始化成功');
+        
+        // 初始化完成後，執行其他初始化任務
+        if (window.onMapReady) {
+            window.onMapReady();
+        }
     } catch (error) {
         console.error('Google Maps 初始化失敗:', error);
+        console.error('錯誤詳情:', error.message, error.stack);
     }
 }
 
