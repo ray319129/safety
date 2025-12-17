@@ -2,8 +2,8 @@
 
 // 配置
 const CONFIG = {
-    API_URL: 'https://b7f5d1f72b4a.ngrok-free.app/api',  // 添加 /api 前綴
-    VIDEO_STREAM_URL: 'https://b7f5d1f72b4a.ngrok-free.app/api/video/vehicle_001',  // 使用 Ngrok URL
+    API_URL: 'http://localhost:5000/api',  // 本地開發使用
+    VIDEO_STREAM_URL: 'http://localhost:5000/api/video/vehicle_001',  // 本地開發使用
     UPDATE_INTERVAL: 5000, // 5 秒更新一次
     MAP_CENTER: { lat: 25.0330, lng: 121.5654 }, // 預設位置（台北）
     MAP_ZOOM: 13
