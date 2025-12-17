@@ -20,36 +20,68 @@ let videoStreamInterval = null;
 document.addEventListener('DOMContentLoaded', () => {
     console.log('前端初始化中...');
     console.log('API URL:', CONFIG.API_URL);
-    initMap();
-    loadAccidents();
+    
+    // 等待 Google Maps API 載入完成
+    if (typeof google !== 'undefined' && typeof google.maps !== 'undefined') {
+        initMap();
+    } else {
+        // 如果 API 尚未載入，等待載入完成
+        window.initMap = function() {
+            initMap();
+            loadAccidents();
+            setupEventListeners();
+            startVideoStream();
+            setInterval(loadAccidents, CONFIG.UPDATE_INTERVAL);
+        };
+    }
+    
+    // 即使 Maps 尚未載入，也先設定其他功能
     setupEventListeners();
-    startVideoStream();
-    setInterval(loadAccidents, CONFIG.UPDATE_INTERVAL);
+    
+    // 如果 Maps 已載入，執行完整初始化
+    if (typeof google !== 'undefined' && typeof google.maps !== 'undefined') {
+        loadAccidents();
+        startVideoStream();
+        setInterval(loadAccidents, CONFIG.UPDATE_INTERVAL);
+    }
 });
 
 // 初始化 Google Maps
 function initMap() {
-    map = new google.maps.Map(document.getElementById('map'), {
-        center: CONFIG.MAP_CENTER,
-        zoom: CONFIG.MAP_ZOOM,
-        styles: [
-            {
-                featureType: 'all',
-                elementType: 'geometry',
-                stylers: [{ color: '#f5f5f5' }]
-            },
-            {
-                featureType: 'water',
-                elementType: 'geometry',
-                stylers: [{ color: '#c9c9c9' }]
-            },
-            {
-                featureType: 'road',
-                elementType: 'geometry',
-                stylers: [{ color: '#ffffff' }]
-            }
-        ]
-    });
+    // 檢查 Google Maps API 是否已載入
+    if (typeof google === 'undefined' || typeof google.maps === 'undefined') {
+        console.error('Google Maps API 尚未載入，請稍候...');
+        // 如果 API 尚未載入，等待一段時間後重試
+        setTimeout(initMap, 100);
+        return;
+    }
+    
+    try {
+        map = new google.maps.Map(document.getElementById('map'), {
+            center: CONFIG.MAP_CENTER,
+            zoom: CONFIG.MAP_ZOOM,
+            styles: [
+                {
+                    featureType: 'all',
+                    elementType: 'geometry',
+                    stylers: [{ color: '#f5f5f5' }]
+                },
+                {
+                    featureType: 'water',
+                    elementType: 'geometry',
+                    stylers: [{ color: '#c9c9c9' }]
+                },
+                {
+                    featureType: 'road',
+                    elementType: 'geometry',
+                    stylers: [{ color: '#ffffff' }]
+                }
+            ]
+        });
+        console.log('Google Maps 初始化成功');
+    } catch (error) {
+        console.error('Google Maps 初始化失敗:', error);
+    }
 }
 
 // 設定事件監聽器
@@ -213,7 +245,7 @@ function displayAccidents(accidents) {
         card.addEventListener('click', () => {
             const accidentId = card.dataset.id;
             const accident = accidents.find(a => a._id === accidentId);
-            if (accident) {
+            if (accident && map) {
                 map.setCenter({ lat: accident.latitude, lng: accident.longitude });
                 map.setZoom(16);
             }
