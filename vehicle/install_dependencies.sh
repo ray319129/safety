@@ -33,6 +33,13 @@ python3 -m pip install --upgrade pip setuptools wheel
 
 # Install dependencies
 echo "Installing dependencies from requirements.txt..."
+echo "Note: This may take several minutes, especially for numpy and opencv-python..."
+
+# Install numpy first (it's a dependency for opencv-python)
+echo "Installing numpy..."
+pip install numpy>=1.26.0
+
+# Install other dependencies
 pip install -r "$SCRIPT_DIR/../requirements.txt"
 
 echo ""
