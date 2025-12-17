@@ -2,7 +2,62 @@
 
 ## 依賴安裝問題
 
-### 問題 1: Windows 編碼錯誤
+### 問題 1: 樹莓派 externally-managed-environment 錯誤
+
+**錯誤訊息：**
+```
+error: externally-managed-environment
+This environment is externally managed
+```
+
+**原因：** 較新版本的 Raspberry Pi OS 使用 PEP 668 規範，不允許直接在系統 Python 環境中安裝套件，必須使用虛擬環境。
+
+**解決方法：**
+
+1. **方法一：使用修正後的安裝腳本（推薦）**
+   ```bash
+   cd ~/Desktop/safety/vehicle
+   chmod +x install_dependencies.sh
+   ./install_dependencies.sh
+   ```
+   腳本會自動建立虛擬環境並在虛擬環境中安裝套件。
+
+2. **方法二：手動建立虛擬環境**
+   ```bash
+   # 確保已安裝 python3-venv
+   sudo apt install -y python3-venv python3-full
+   
+   # 在專案根目錄建立虛擬環境
+   cd ~/Desktop/safety
+   python3 -m venv venv
+   
+   # 啟動虛擬環境
+   source venv/bin/activate
+   
+   # 安裝依賴
+   cd vehicle
+   pip install --upgrade pip setuptools wheel
+   pip install -r ../requirements.txt
+   ```
+
+3. **方法三：使用 --break-system-packages（不推薦）**
+   ```bash
+   pip install --break-system-packages -r requirements.txt
+   ```
+   ⚠️ 警告：這可能會破壞系統 Python 環境，不建議使用。
+
+**使用虛擬環境執行程式：**
+```bash
+# 啟動虛擬環境
+cd ~/Desktop/safety
+source venv/bin/activate
+
+# 執行主程式
+cd vehicle
+python3 main.py 60
+```
+
+### 問題 2: Windows 編碼錯誤
 
 **錯誤訊息：**
 ```
@@ -33,7 +88,7 @@ UnicodeDecodeError: 'cp950' codec can't decode byte 0x8c in position 4: illegal 
    pip install -r requirements.txt
    ```
 
-### 問題 2: 樹莓派 setuptools 錯誤
+### 問題 3: 樹莓派 setuptools 錯誤
 
 **錯誤訊息：**
 ```
