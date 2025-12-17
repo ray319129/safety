@@ -3,7 +3,6 @@
 使用 Token-based 驗證
 """
 
-import jwt
 import time
 from functools import wraps
 from typing import Optional
@@ -11,6 +10,15 @@ from flask import request, jsonify
 import sys
 import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+# 確保導入正確的 PyJWT
+try:
+    import jwt as pyjwt
+except ImportError:
+    try:
+        import PyJWT as pyjwt
+    except ImportError:
+        raise ImportError('請安裝 PyJWT: pip install PyJWT')
 
 from backend.config import BackendConfig
 
@@ -31,7 +39,7 @@ def generate_token(username: str) -> str:
             'username': username,
             'exp': int(time.time()) + config.JWT_EXPIRATION
         }
-        token = jwt.encode(payload, config.JWT_SECRET, algorithm=config.JWT_ALGORITHM)
+        token = pyjwt.encode(payload, config.JWT_SECRET, algorithm=config.JWT_ALGORITHM)
         # PyJWT 2.x 返回字串，確保返回字串類型
         if isinstance(token, bytes):
             return token.decode('utf-8')
@@ -51,11 +59,11 @@ def verify_token(token: str) -> dict:
         dict: Token 內容或 None
     """
     try:
-        payload = jwt.decode(token, config.JWT_SECRET, algorithms=[config.JWT_ALGORITHM])
+        payload = pyjwt.decode(token, config.JWT_SECRET, algorithms=[config.JWT_ALGORITHM])
         return payload
-    except jwt.ExpiredSignatureError:
+    except pyjwt.ExpiredSignatureError:
         return None
-    except jwt.InvalidTokenError:
+    except pyjwt.InvalidTokenError:
         return None
 
 def admin_required(f):
