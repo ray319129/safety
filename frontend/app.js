@@ -5,7 +5,7 @@ const CONFIG = {
     API_URL: 'http://localhost:5000/api',  // 本地開發使用
     VIDEO_STREAM_URL: 'http://localhost:5000/api/video/vehicle_001',  // 本地開發使用
     UPDATE_INTERVAL: 5000, // 5 秒更新一次
-    MAP_CENTER: { lat: 25.0330, lng: 121.5654 }, // 預設位置（台北）
+    MAP_CENTER: [25.0330, 121.5654], // 預設位置（台北）[緯度, 經度]
     MAP_ZOOM: 13
 };
 
@@ -16,59 +16,28 @@ let isAdmin = false;
 let adminToken = null;
 let videoStreamInterval = null;
 
-// 地圖準備就緒的回調
-window.onMapReady = function() {
-    console.log('地圖已準備就緒，開始載入資料...');
-    loadAccidents();
-    startVideoStream();
-    setInterval(loadAccidents, CONFIG.UPDATE_INTERVAL);
-};
-
 // 初始化
 document.addEventListener('DOMContentLoaded', () => {
     console.log('前端初始化中...');
     console.log('API URL:', CONFIG.API_URL);
     
-    // 設定事件監聽器（不依賴地圖）
+    // 初始化地圖（Leaflet 不需要等待回調）
+    initMap();
+    
+    // 設定事件監聽器
     setupEventListeners();
     
-    // 檢查 Google Maps API 是否已經載入
-    if (typeof google !== 'undefined' && typeof google.maps !== 'undefined' && typeof google.maps.Map !== 'undefined') {
-        console.log('Google Maps API 已載入，立即初始化地圖');
-        initMap();
-    } else {
-        console.log('等待 Google Maps API 載入...');
-        // initMap 會由 Google Maps API 的 callback 參數自動調用
-        // 如果 API 已經載入但 callback 還沒執行，手動調用
-        let checkCount = 0;
-        const checkInterval = setInterval(() => {
-            checkCount++;
-            if (typeof google !== 'undefined' && typeof google.maps !== 'undefined' && typeof google.maps.Map !== 'undefined') {
-                console.log('檢測到 Google Maps API 已載入，初始化地圖');
-                clearInterval(checkInterval);
-                if (!map) {
-                    initMap();
-                }
-            } else if (checkCount > 50) {
-                // 10 秒後停止檢查
-                console.error('Google Maps API 載入超時');
-                clearInterval(checkInterval);
-            }
-        }, 200);
-    }
+    // 載入資料
+    loadAccidents();
+    startVideoStream();
+    setInterval(loadAccidents, CONFIG.UPDATE_INTERVAL);
 });
 
-// 初始化 Google Maps（由 Google Maps API 回調函數調用）
+// 初始化 Leaflet 地圖
 function initMap() {
-    console.log('initMap 被調用');
-    console.log('google 物件:', typeof google);
-    console.log('google.maps 物件:', typeof google?.maps);
-    console.log('google.maps.Map:', typeof google?.maps?.Map);
-    
-    // 檢查 Google Maps API 是否已完全載入
-    if (typeof google === 'undefined' || typeof google.maps === 'undefined' || typeof google.maps.Map === 'undefined') {
-        console.error('Google Maps API 尚未完全載入，請稍候...');
-        // 如果 API 尚未載入，等待一段時間後重試
+    // 檢查 Leaflet 是否已載入
+    if (typeof L === 'undefined') {
+        console.error('Leaflet 尚未載入，請稍候...');
         setTimeout(initMap, 200);
         return;
     }
@@ -81,35 +50,18 @@ function initMap() {
     }
     
     try {
-        map = new google.maps.Map(mapElement, {
-            center: CONFIG.MAP_CENTER,
-            zoom: CONFIG.MAP_ZOOM,
-            styles: [
-                {
-                    featureType: 'all',
-                    elementType: 'geometry',
-                    stylers: [{ color: '#f5f5f5' }]
-                },
-                {
-                    featureType: 'water',
-                    elementType: 'geometry',
-                    stylers: [{ color: '#c9c9c9' }]
-                },
-                {
-                    featureType: 'road',
-                    elementType: 'geometry',
-                    stylers: [{ color: '#ffffff' }]
-                }
-            ]
-        });
-        console.log('Google Maps 初始化成功');
+        // 初始化 Leaflet 地圖
+        map = L.map('map').setView(CONFIG.MAP_CENTER, CONFIG.MAP_ZOOM);
         
-        // 初始化完成後，執行其他初始化任務
-        if (window.onMapReady) {
-            window.onMapReady();
-        }
+        // 添加 OpenStreetMap 圖層
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+            maxZoom: 19
+        }).addTo(map);
+        
+        console.log('Leaflet 地圖初始化成功');
     } catch (error) {
-        console.error('Google Maps 初始化失敗:', error);
+        console.error('Leaflet 地圖初始化失敗:', error);
         console.error('錯誤詳情:', error.message, error.stack);
     }
 }
@@ -212,24 +164,45 @@ async function loadAccidents() {
     try {
         const url = `${CONFIG.API_URL}/get_accidents?active_only=true`;
         console.log('載入事故列表:', url);
-        const response = await fetch(url);
+        
+        const response = await fetch(url, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
         
         if (!response.ok) {
             console.error('HTTP 錯誤:', response.status, response.statusText);
+            const errorText = await response.text();
+            console.error('錯誤詳情:', errorText);
             throw new Error(`HTTP error! status: ${response.status}`);
         }
         
         const data = await response.json();
+        console.log('事故列表載入成功:', data);
 
-        if (response.ok) {
+        if (data.accidents) {
             displayAccidents(data.accidents);
             updateMapMarkers(data.accidents);
             document.getElementById('activeAccidentsCount').textContent = data.accidents.length;
         } else {
-            console.error('Failed to load accidents:', data.error);
+            console.warn('API 回應格式異常:', data);
+            displayAccidents([]);
+            updateMapMarkers([]);
         }
     } catch (error) {
-        console.error('Error loading accidents:', error);
+        console.error('載入事故列表失敗:', error);
+        // 顯示錯誤訊息給使用者
+        const listContainer = document.getElementById('accidentsList');
+        if (listContainer) {
+            listContainer.innerHTML = `
+                <div class="text-red-500 text-center py-8">
+                    <p>無法連接到後端伺服器</p>
+                    <p class="text-sm mt-2">請確認後端伺服器正在運行 (http://localhost:5000)</p>
+                </div>
+            `;
+        }
     }
 }
 
@@ -276,8 +249,16 @@ function displayAccidents(accidents) {
             const accidentId = card.dataset.id;
             const accident = accidents.find(a => a._id === accidentId);
             if (accident && map) {
-                map.setCenter({ lat: accident.latitude, lng: accident.longitude });
-                map.setZoom(16);
+                map.setView([accident.latitude, accident.longitude], 16);
+                // 打開對應標記的彈出視窗
+                const marker = markers.find(m => {
+                    const latlng = m.getLatLng();
+                    return Math.abs(latlng.lat - accident.latitude) < 0.0001 &&
+                           Math.abs(latlng.lng - accident.longitude) < 0.0001;
+                });
+                if (marker) {
+                    marker.openPopup();
+                }
             }
         });
     });
@@ -290,43 +271,59 @@ function updateAccidentCards() {
 
 // 更新地圖標記
 function updateMapMarkers(accidents) {
+    // 檢查地圖是否已初始化
+    if (!map || typeof L === 'undefined') {
+        console.warn('地圖尚未初始化，無法更新標記');
+        return;
+    }
+    
     // 清除舊標記
-    markers.forEach(marker => marker.setMap(null));
+    markers.forEach(marker => map.removeLayer(marker));
     markers = [];
 
     // 添加新標記
     accidents.forEach(accident => {
-        const marker = new google.maps.Marker({
-            position: { lat: accident.latitude, lng: accident.longitude },
-            map: map,
-            title: `事故 #${accident._id.slice(-6)}`,
-            icon: {
-                url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(`
-                    <svg width="32" height="32" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
-                        <circle cx="16" cy="16" r="12" fill="#ef4444" stroke="white" stroke-width="2"/>
-                        <text x="16" y="20" font-size="12" fill="white" text-anchor="middle" font-weight="bold">!</text>
-                    </svg>
-                `),
-                scaledSize: new google.maps.Size(32, 32),
-                anchor: new google.maps.Point(16, 16)
-            }
+        // 建立自訂圖示
+        const customIcon = L.divIcon({
+            className: 'custom-marker',
+            html: `
+                <div style="
+                    width: 32px;
+                    height: 32px;
+                    background-color: #ef4444;
+                    border: 2px solid white;
+                    border-radius: 50%;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    color: white;
+                    font-weight: bold;
+                    font-size: 16px;
+                    box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+                ">!</div>
+            `,
+            iconSize: [32, 32],
+            iconAnchor: [16, 16]
         });
 
-        // 資訊視窗
-        const infoWindow = new google.maps.InfoWindow({
-            content: `
-                <div style="padding: 8px;">
-                    <h3 style="margin: 0 0 8px 0; font-weight: bold;">事故 #${accident._id.slice(-6)}</h3>
-                    <p style="margin: 4px 0; font-size: 12px;">時間: ${new Date(accident.timestamp * 1000).toLocaleString('zh-TW')}</p>
-                    <p style="margin: 4px 0; font-size: 12px;">裝置: ${accident.device_id || 'N/A'}</p>
-                </div>
-            `
-        });
+        // 建立標記
+        const marker = L.marker([accident.latitude, accident.longitude], {
+            icon: customIcon,
+            title: `事故 #${accident._id.slice(-6)}`
+        }).addTo(map);
 
-        marker.addListener('click', () => {
-            infoWindow.open(map, marker);
-        });
+        // 建立彈出視窗
+        const popup = L.popup({
+            maxWidth: 250
+        }).setContent(`
+            <div style="padding: 8px;">
+                <h3 style="margin: 0 0 8px 0; font-weight: bold;">事故 #${accident._id.slice(-6)}</h3>
+                <p style="margin: 4px 0; font-size: 12px;">時間: ${new Date(accident.timestamp * 1000).toLocaleString('zh-TW')}</p>
+                <p style="margin: 4px 0; font-size: 12px;">裝置: ${accident.device_id || 'N/A'}</p>
+            </div>
+        `);
 
+        marker.bindPopup(popup);
         markers.push(marker);
     });
 }
@@ -374,18 +371,40 @@ function updateVideoStream(showOverlay) {
     const videoImg = document.getElementById('videoStream');
     const placeholder = document.getElementById('videoPlaceholder');
     
+    if (!videoImg || !placeholder) {
+        console.error('找不到影像串流元素');
+        return;
+    }
+    
     const overlayParam = showOverlay ? 'true' : 'false';
     const streamUrl = `${CONFIG.VIDEO_STREAM_URL}?overlay=${overlayParam}`;
     
+    console.log('更新影像串流:', streamUrl);
+    
+    // 重置狀態
+    videoImg.classList.add('hidden');
+    placeholder.classList.remove('hidden');
+    placeholder.textContent = '正在連接影像串流...';
+    
+    // 設置影像源
     videoImg.src = streamUrl;
-    videoImg.classList.remove('hidden');
-    placeholder.classList.add('hidden');
+    
+    // 處理影像載入成功
+    videoImg.onload = () => {
+        console.log('影像串流連接成功');
+        videoImg.classList.remove('hidden');
+        placeholder.classList.add('hidden');
+    };
     
     // 處理影像載入錯誤
     videoImg.onerror = () => {
+        console.error('影像串流載入失敗:', streamUrl);
+        console.error('請確認：');
+        console.error('1. 後端伺服器正在運行 (http://localhost:5000)');
+        console.error('2. 車載端 web_api.py 正在運行 (http://localhost:8080)');
         videoImg.classList.add('hidden');
         placeholder.classList.remove('hidden');
-        placeholder.textContent = '無法連接影像串流';
+        placeholder.textContent = '無法連接影像串流（請確認後端和車載端服務正在運行）';
     };
 }
 

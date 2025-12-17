@@ -1,5 +1,16 @@
 /* 自訂樣式 */
 
+/* Leaflet 地圖樣式調整 */
+#map {
+    z-index: 1;
+}
+
+/* 自訂標記樣式 */
+.custom-marker {
+    background: transparent;
+    border: none;
+}
+
 /* 按鈕基礎樣式 */
 .btn-primary,
 .btn-secondary {

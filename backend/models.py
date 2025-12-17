@@ -77,25 +77,30 @@ class AccidentModel:
         Returns:
             list: 事故記錄列表
         """
-        collection = db.get_collection('accidents')
-        
-        query = {}
-        if active_only:
-            query['status'] = 'active'
-        
-        accidents = list(collection.find(query).sort('created_at', -1))
-        
-        # 轉換 ObjectId 為字串
-        for accident in accidents:
-            accident['_id'] = str(accident['_id'])
-            if isinstance(accident.get('timestamp'), datetime):
-                accident['timestamp'] = accident['timestamp'].timestamp()
-            if isinstance(accident.get('created_at'), datetime):
-                accident['created_at'] = accident['created_at'].timestamp()
-            if isinstance(accident.get('updated_at'), datetime):
-                accident['updated_at'] = accident['updated_at'].timestamp()
-        
-        return accidents
+        try:
+            collection = db.get_collection('accidents')
+            
+            query = {}
+            if active_only:
+                query['status'] = 'active'
+            
+            accidents = list(collection.find(query).sort('created_at', -1))
+            
+            # 轉換 ObjectId 為字串
+            for accident in accidents:
+                accident['_id'] = str(accident['_id'])
+                if isinstance(accident.get('timestamp'), datetime):
+                    accident['timestamp'] = accident['timestamp'].timestamp()
+                if isinstance(accident.get('created_at'), datetime):
+                    accident['created_at'] = accident['created_at'].timestamp()
+                if isinstance(accident.get('updated_at'), datetime):
+                    accident['updated_at'] = accident['updated_at'].timestamp()
+            
+            return accidents
+        except Exception as e:
+            print(f'MongoDB 查詢錯誤: {e}')
+            # 如果 MongoDB 連接失敗，返回空列表而不是拋出異常
+            return []
     
     @staticmethod
     def get_by_id(accident_id: str) -> Optional[dict]:

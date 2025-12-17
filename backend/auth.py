@@ -26,11 +26,19 @@ def generate_token(username: str) -> str:
     Returns:
         str: JWT Token
     """
-    payload = {
-        'username': username,
-        'exp': int(time.time()) + config.JWT_EXPIRATION
-    }
-    return jwt.encode(payload, config.JWT_SECRET, algorithm=config.JWT_ALGORITHM)
+    try:
+        payload = {
+            'username': username,
+            'exp': int(time.time()) + config.JWT_EXPIRATION
+        }
+        token = jwt.encode(payload, config.JWT_SECRET, algorithm=config.JWT_ALGORITHM)
+        # PyJWT 2.x 返回字串，確保返回字串類型
+        if isinstance(token, bytes):
+            return token.decode('utf-8')
+        return str(token)
+    except Exception as e:
+        print(f'產生 Token 錯誤: {e}')
+        raise
 
 def verify_token(token: str) -> dict:
     """

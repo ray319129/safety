@@ -37,20 +37,26 @@ def api_login():
             "message": "登入成功"
         }
     """
-    data = request.get_json()
-    
-    if not data or 'username' not in data or 'password' not in data:
-        return jsonify({'error': '缺少使用者名稱或密碼'}), 400
-    
-    token = login(data['username'], data['password'])
-    
-    if token:
-        return jsonify({
-            'token': token,
-            'message': '登入成功'
-        }), 200
-    else:
-        return jsonify({'error': '使用者名稱或密碼錯誤'}), 401
+    try:
+        data = request.get_json()
+        
+        if not data or 'username' not in data or 'password' not in data:
+            return jsonify({'error': '缺少使用者名稱或密碼'}), 400
+        
+        token = login(data['username'], data['password'])
+        
+        if token:
+            return jsonify({
+                'token': token,
+                'message': '登入成功'
+            }), 200
+        else:
+            return jsonify({'error': '使用者名稱或密碼錯誤'}), 401
+    except Exception as e:
+        print(f'登入錯誤: {e}')
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': f'登入處理失敗: {str(e)}'}), 500
 
 @app.route('/api/report_accident', methods=['POST'])
 def api_report_accident():
