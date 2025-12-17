@@ -180,10 +180,23 @@ git clone https://github.com/ray319129/safety.git
 cd safety
 ```
 
-5. 建立虛擬環境並安裝依賴：
+5. 安裝 Python 虛擬環境支援（如果需要）：
 ```bash
+sudo apt install -y python3-venv python3-full
+```
+
+6. 建立虛擬環境並安裝依賴：
+```bash
+# 方法一：使用自動安裝腳本（推薦）
+cd vehicle
+chmod +x install_dependencies.sh
+./install_dependencies.sh
+
+# 方法二：手動建立虛擬環境
+cd ~/safety
 python3 -m venv venv
 source venv/bin/activate
+pip install --upgrade pip setuptools wheel
 pip install -r requirements.txt
 ```
 
@@ -245,9 +258,20 @@ ngrok http 5000
 ### 啟動車載系統
 
 在樹莓派上執行：
+
+**方法一：使用啟動腳本（推薦）**
 ```bash
-cd ~/safety/vehicle
-python3 main.py
+cd ~/safety
+chmod +x start_vehicle.sh
+./start_vehicle.sh 60  # 速限 60 km/h
+```
+
+**方法二：手動啟動**
+```bash
+cd ~/safety
+source venv/bin/activate
+cd vehicle
+python3 main.py 60  # 速限 60 km/h
 ```
 
 ### 啟動後端服務

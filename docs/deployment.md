@@ -67,9 +67,15 @@ source venv/bin/activate
 ### 步驟 6: 安裝 Python 依賴
 
 ```bash
-pip install --upgrade pip
+# 先升級 pip、setuptools 和 wheel（解決 setuptools 錯誤）
+python3 -m pip install --upgrade pip setuptools wheel
+
+# 安裝依賴
 pip install -r requirements.txt
-pip install python-dotenv flask
+
+# 或使用提供的安裝腳本
+chmod +x install_dependencies.sh
+./install_dependencies.sh
 ```
 
 ### 步驟 7: 設定環境變數
@@ -188,9 +194,29 @@ source venv/bin/activate
 
 ### 步驟 4: 安裝依賴
 
+**Windows:**
 ```bash
-pip install --upgrade pip
+# 先升級 pip、setuptools 和 wheel（解決編碼和 setuptools 錯誤）
+python -m pip install --upgrade pip setuptools wheel
+
+# 安裝依賴
 pip install -r requirements.txt
+
+# 或使用提供的安裝腳本
+install_dependencies.bat
+```
+
+**Linux/Mac:**
+```bash
+# 先升級 pip、setuptools 和 wheel
+python3 -m pip install --upgrade pip setuptools wheel
+
+# 安裝依賴
+pip install -r requirements.txt
+
+# 或使用提供的安裝腳本
+chmod +x install_dependencies.sh
+./install_dependencies.sh
 ```
 
 ### 步驟 5: 設定環境變數
@@ -312,6 +338,41 @@ curl -X POST http://localhost:5000/api/login \
 5. 測試偵測框開關
 
 ## 常見問題
+
+### 依賴安裝錯誤
+
+#### 問題 1: `UnicodeDecodeError: 'cp950' codec can't decode` (Windows)
+
+**原因：** Windows 使用 cp950 編碼，但 requirements.txt 可能包含 UTF-8 字元。
+
+**解決方法：**
+1. 先升級 pip、setuptools 和 wheel：
+   ```bash
+   python -m pip install --upgrade pip setuptools wheel
+   ```
+2. 使用提供的安裝腳本：
+   ```bash
+   install_dependencies.bat
+   ```
+
+#### 問題 2: `BackendUnavailable: Cannot import 'setuptools.build_meta'` (樹莓派)
+
+**原因：** 缺少或版本過舊的 setuptools。
+
+**解決方法：**
+1. 先升級 pip、setuptools 和 wheel：
+   ```bash
+   python3 -m pip install --upgrade pip setuptools wheel
+   ```
+2. 再安裝依賴：
+   ```bash
+   pip install -r requirements.txt
+   ```
+3. 或使用提供的安裝腳本：
+   ```bash
+   chmod +x install_dependencies.sh
+   ./install_dependencies.sh
+   ```
 
 ### GPS 無法連接
 - 檢查序列埠是否正確：`ls -l /dev/tty*`

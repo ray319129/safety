@@ -1,4 +1,6 @@
-# 後端依賴
+# Backend dependencies
+setuptools>=65.0.0
+wheel
 Flask==3.0.0
 Flask-CORS==4.0.0
 pymongo==4.6.0
