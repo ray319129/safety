@@ -12,12 +12,25 @@ import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 # 確保導入正確的 PyJWT
+# 先嘗試直接導入 PyJWT，避免與其他 jwt 模組衝突
 try:
-    import jwt as pyjwt
+    # 方法 1: 直接導入 PyJWT（推薦）
+    from jwt import encode as jwt_encode, decode as jwt_decode, ExpiredSignatureError, InvalidTokenError
+    # 建立一個模擬物件以保持相容性
+    class PyJWTWrapper:
+        encode = staticmethod(jwt_encode)
+        decode = staticmethod(jwt_decode)
+        ExpiredSignatureError = ExpiredSignatureError
+        InvalidTokenError = InvalidTokenError
+    pyjwt = PyJWTWrapper()
 except ImportError:
     try:
-        import PyJWT as pyjwt
-    except ImportError:
+        # 方法 2: 使用別名導入
+        import jwt as pyjwt
+        # 驗證是否為正確的 PyJWT
+        if not hasattr(pyjwt, 'encode'):
+            raise ImportError('導入的 jwt 模組不是 PyJWT')
+    except (ImportError, AttributeError):
         raise ImportError('請安裝 PyJWT: pip install PyJWT')
 
 from backend.config import BackendConfig

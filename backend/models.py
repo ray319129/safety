@@ -18,8 +18,18 @@ class Database:
     def __init__(self):
         """初始化資料庫連接"""
         self.config = BackendConfig()
-        self.client = MongoClient(self.config.MONGODB_URI)
-        self.db = self.client[self.config.MONGODB_DB_NAME]
+        try:
+            self.client = MongoClient(self.config.MONGODB_URI, serverSelectionTimeoutMS=5000)
+            # 測試連接
+            self.client.server_info()
+            self.db = self.client[self.config.MONGODB_DB_NAME]
+            print(f'MongoDB 連接成功: {self.config.MONGODB_DB_NAME}')
+        except Exception as e:
+            print(f'MongoDB 連接失敗: {e}')
+            print('將使用空資料庫模式（資料不會被保存）')
+            # 建立一個假的資料庫物件以避免後續錯誤
+            self.client = None
+            self.db = None
         
     def get_collection(self, name: str) -> Collection:
         """
@@ -31,6 +41,8 @@ class Database:
         Returns:
             Collection: MongoDB 集合物件
         """
+        if self.db is None:
+            raise Exception('MongoDB 未連接')
         return self.db[name]
 
 # 全域資料庫實例
