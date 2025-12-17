@@ -18,6 +18,8 @@ let videoStreamInterval = null;
 
 // 初始化
 document.addEventListener('DOMContentLoaded', () => {
+    console.log('前端初始化中...');
+    console.log('API URL:', CONFIG.API_URL);
     initMap();
     loadAccidents();
     setupEventListeners();
@@ -88,7 +90,9 @@ async function handleLogin() {
     const password = document.getElementById('password').value;
 
     try {
-        const response = await fetch(`${CONFIG.API_URL}/login`, {
+        const url = `${CONFIG.API_URL}/login`;
+        console.log('登入請求:', url);
+        const response = await fetch(url, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
@@ -144,7 +148,15 @@ function updateUIForUser() {
 // 載入事故列表
 async function loadAccidents() {
     try {
-        const response = await fetch(`${CONFIG.API_URL}/get_accidents?active_only=true`);
+        const url = `${CONFIG.API_URL}/get_accidents?active_only=true`;
+        console.log('載入事故列表:', url);
+        const response = await fetch(url);
+        
+        if (!response.ok) {
+            console.error('HTTP 錯誤:', response.status, response.statusText);
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
         const data = await response.json();
 
         if (response.ok) {
