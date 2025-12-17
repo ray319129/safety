@@ -32,6 +32,11 @@ class VisionModule:
         self.canny_low = 50
         self.canny_high = 150
         
+        # HOG 行人偵測器（用於人體偵測）
+        self.hog = cv2.HOGDescriptor()
+        self.hog.setSVMDetector(cv2.HOGDescriptor_getDefaultPeopleDetector())
+
+        
     def initialize_camera(self) -> bool:
         """
         初始化攝影機
@@ -231,6 +236,46 @@ class VisionModule:
         else:
             return 'forward'
     
+    def detect_people(self, frame: np.ndarray) -> List[Tuple[int, int, int, int]]:
+        """
+        使用 HOG+SVM 偵測畫面中的人形。
+        
+        Args:
+            frame: 輸入 BGR 影像
+        
+        Returns:
+            List[Tuple[int, int, int, int]]: 人物邊界框列表
+        """
+        h, w = frame.shape[:2]
+        scale = 640.0 / max(w, h)
+        if scale < 1.0:
+            resized = cv2.resize(frame, (int(w * scale), int(h * scale)))
+        else:
+            resized = frame
+
+        rects, weights = self.hog.detectMultiScale(
+            resized,
+            winStride=(8, 8),
+            padding=(8, 8),
+            scale=1.05
+        )
+
+        people: List[Tuple[int, int, int, int]] = []
+
+        for (x, y, rw, rh), score in zip(rects, weights):
+            if score < self.confidence_threshold:
+                continue
+
+            if scale < 1.0:
+                x = int(x / scale)
+                y = int(y / scale)
+                rw = int(rw / scale)
+                rh = int(rh / scale)
+
+            people.append((x, y, rw, rh))
+
+        return people
+    
     def draw_detections(self, frame: np.ndarray, obstacles: List[Tuple[int, int, int, int]]) -> np.ndarray:
         """
         在影像上繪製偵測框
@@ -251,8 +296,8 @@ class VisionModule:
             # 繪製邊界框
             cv2.rectangle(result_frame, (x, y), (x + w, y + h), (0, 255, 0), 2)
             
-            # 標註文字
-            cv2.putText(result_frame, 'Obstacle', (x, y - 10),
+            # 標註文字（以 Person 顯示，表示偵測到的人形）
+            cv2.putText(result_frame, 'Person', (x, y - 10),
                        cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
         
         return result_frame
@@ -292,8 +337,9 @@ class VisionModule:
         if frame is None:
             return None
         
-        obstacles = self.detect_obstacles(frame)
-        frame_with_detections = self.draw_detections(frame, obstacles)
+        # 使用人體偵測取得人形邊界框，供串流疊加與受傷人數計算
+        people = self.detect_people(frame)
+        frame_with_detections = self.draw_detections(frame, people)
         
-        return (frame_with_detections, obstacles)
+        return (frame_with_detections, people)
 

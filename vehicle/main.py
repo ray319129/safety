@@ -19,6 +19,7 @@ from motor_controller import MotorController
 from servo_controller import ServoController
 from alarm import AlarmModule
 from web_api import run_web_api
+from bmduino_controller import BMduinoController
 
 class SafetyVehicle:
     """自動安全警示車主類別"""
@@ -39,6 +40,17 @@ class SafetyVehicle:
             self.config.OBSTACLE_MIN_AREA,
             self.config.VISION_CONFIDENCE_THRESHOLD
         )
+        
+        # 與 BMduino 建立序列連線，用於控制馬達、伺服、警報與 LED
+        try:
+            self.bm = BMduinoController(
+                self.config.BMDUINO_PORT,
+                self.config.BMDUINO_BAUDRATE
+            )
+            print(f\"BMduino 控制器已就緒: {self.config.BMDUINO_PORT} @ {self.config.BMDUINO_BAUDRATE}\")
+        except Exception as e:
+            print(f\"警告: 無法初始化 BMduino 控制器: {e}\")
+            self.bm = None
         
         self.motor = MotorController(
             self.config.MOTOR_LEFT_PWM_PIN,
@@ -347,18 +359,27 @@ class SafetyVehicle:
             report_interval = 10.0  # 至少間隔 10 秒再上報一次，避免過於頻繁
             
             while self.running:
-                frame = self.vision.get_frame()
-                if frame is not None:
-                    # 這裡暫時沿用現有障礙物偵測作為「人形數量」的近似
-                    obstacles = self.vision.detect_obstacles(frame)
-                    injured_count = len(obstacles)
+                result = self.vision.get_frame_with_detections()
+                if result is not None:
+                    # frame 目前僅用於即時影像串流疊加，這裡只需要人物列表計算人數
+                    _, people = result
+                    injured_count = len(people)
                     
                     if injured_count > 0:
                         now = time.time()
                         if now - last_report_time >= report_interval:
-                            print(f\"偵測到疑似人形 {injured_count} 個，進行事故上報...\")
+                            print(f"偵測到人形 {injured_count} 個，進行事故上報...")
                             self.report_accident(injured_count=injured_count)
                             last_report_time = now
+                            
+                            # 透過 BMduino 觸發實體警示（若可用）
+                            if self.bm is not None:
+                                try:
+                                    self.bm.raise_sign()
+                                    self.bm.play_alarm(3.0)
+                                    self.bm.set_led_brightness(255)
+                                except Exception as e:
+                                    print(f"BMduino 警示觸發失敗: {e}")
                 time.sleep(0.2)
                 
         except KeyboardInterrupt:
@@ -375,23 +396,30 @@ class SafetyVehicle:
         print("\n清理系統資源...")
         self.running = False
         
-        # 停止馬達
-        self.motor.stop()
-        
-        # 降下警示牌
-        self.servo.lower_sign()
+        # 停止馬達與降下警示牌（優先透過 BMduino 控制）
+        try:
+            if hasattr(self, 'bm') and self.bm is not None:
+                self.bm.stop_motor()
+                self.bm.lower_sign()
+        except Exception as e:
+            print(f"BMduino 清理失敗: {e}")
         
         # 清理各模組（不調用 GPIO.cleanup，統一在最後清理）
         self.vision.release_camera()
         self.gps.disconnect()
-        self.motor.cleanup()
-        self.servo.cleanup()
-        self.alarm.cleanup()
         
-        # 統一清理 GPIO（在所有模組清理完成後）
+        # 若仍在使用樹莓派 GPIO 控制，可保留原本的清理邏輯
         try:
-            import RPi.GPIO as GPIO
-            GPIO.cleanup()
+            self.motor.cleanup()
+            self.servo.cleanup()
+            self.alarm.cleanup()
+        except Exception:
+            pass
+        
+        # 關閉 BMduino 連線
+        try:
+            if hasattr(self, 'bm') and self.bm is not None:
+                self.bm.close()
         except Exception:
             pass
         

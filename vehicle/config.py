@@ -52,4 +52,12 @@ class VehicleConfig:
     MOTOR_SPEED_NORMAL = 60
     MOTOR_SPEED_TURN = 40
     MOTOR_SPEED_AVOID = 50
+    
+    # Web API 配置（影像串流）
+    WEB_API_HOST = os.getenv('WEB_API_HOST', '0.0.0.0')
+    WEB_API_PORT = int(os.getenv('WEB_API_PORT', '8080'))
+
+    # BMduino 序列連線配置
+    BMDUINO_PORT = os.getenv('BMDUINO_PORT', '/dev/ttyACM0')
+    BMDUINO_BAUDRATE = int(os.getenv('BMDUINO_BAUDRATE', '115200'))
 
