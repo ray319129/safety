@@ -165,6 +165,22 @@ class AccidentModel:
             return result.deleted_count > 0
         except:
             return False
+
+    @staticmethod
+    def clear_all() -> int:
+        """
+        清除所有事故記錄
+
+        Returns:
+            int: 被刪除的筆數
+        """
+        collection = db.get_collection('accidents')
+        try:
+            result = collection.delete_many({})
+            return result.deleted_count
+        except Exception as e:
+            print(f'MongoDB 清除事故錯誤: {e}')
+            return 0
     
     @staticmethod
     def update_status(accident_id: str, status: str) -> bool:

@@ -47,9 +47,9 @@ class SafetyVehicle:
                 self.config.BMDUINO_PORT,
                 self.config.BMDUINO_BAUDRATE
             )
-            print(f\"BMduino 控制器已就緒: {self.config.BMDUINO_PORT} @ {self.config.BMDUINO_BAUDRATE}\")
+            print(f"BMduino 控制器已就緒: {self.config.BMDUINO_PORT} @ {self.config.BMDUINO_BAUDRATE}")
         except Exception as e:
-            print(f\"警告: 無法初始化 BMduino 控制器: {e}\")
+            print(f"警告: 無法初始化 BMduino 控制器: {e}")
             self.bm = None
         
         self.motor = MotorController(
@@ -141,7 +141,8 @@ class SafetyVehicle:
         if not self.gps.connect():
             print("警告: GPS 連接失敗，將使用模擬模式")
         else:
-            if not self.gps.wait_for_fix(timeout=30):
+            # 將 GPS 定位等待時間延長至 150 秒，以提高首次定位成功率
+            if not self.gps.wait_for_fix(timeout=150):
                 print("警告: GPS 定位失敗，將使用模擬模式")
         
         # 初始化視覺辨識

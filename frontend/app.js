@@ -96,6 +96,14 @@ function setupEventListeners() {
         const showOverlay = e.target.checked;
         updateVideoStream(showOverlay);
     });
+
+    // 一鍵清理事故列表（管理員）
+    const clearBtn = document.getElementById('clearAccidentsBtn');
+    if (clearBtn) {
+        clearBtn.addEventListener('click', async () => {
+            await clearAllAccidents();
+        });
+    }
 }
 
 // 處理登入
@@ -360,6 +368,40 @@ async function deleteAccident(accidentId) {
     } catch (error) {
         showNotification('連線錯誤', 'error');
         console.error('Delete error:', error);
+    }
+}
+
+// 一鍵清理所有事故（管理員功能）
+async function clearAllAccidents() {
+    if (!isAdmin || !adminToken) {
+        showNotification('需要管理員權限', 'error');
+        return;
+    }
+
+    if (!confirm('確定要清空所有事故嗎？此操作無法復原。')) {
+        return;
+    }
+
+    try {
+        const response = await fetch(`${CONFIG.API_URL}/clear_accidents`, {
+            method: 'DELETE',
+            headers: {
+                'Authorization': `Bearer ${adminToken}`
+            }
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+            const count = typeof data.deleted === 'number' ? data.deleted : 0;
+            showNotification(`已清除 ${count} 筆事故`, 'success');
+            loadAccidents();
+        } else {
+            showNotification(data.error || '清除事故列表失敗', 'error');
+        }
+    } catch (error) {
+        showNotification('連線錯誤', 'error');
+        console.error('Clear accidents error:', error);
     }
 }
 

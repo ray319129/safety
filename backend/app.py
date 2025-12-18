@@ -187,6 +187,28 @@ def api_delete_accident(accident_id):
     except Exception as e:
         return jsonify({'error': f'刪除事故失敗: {str(e)}'}), 500
 
+
+@app.route('/api/clear_accidents', methods=['DELETE'])
+@admin_required
+def api_clear_accidents():
+    """
+    管理員一鍵清除所有事故記錄
+
+    Returns:
+        {
+            "deleted": 10,
+            "message": "所有事故已清除"
+        }
+    """
+    try:
+        deleted_count = AccidentModel.clear_all()
+        return jsonify({
+            'deleted': deleted_count,
+            'message': '所有事故已清除'
+        }), 200
+    except Exception as e:
+        return jsonify({'error': f'清除事故列表失敗: {str(e)}'}), 500
+
 @app.route('/api/video/<device_id>', methods=['GET'])
 def api_video(device_id):
     """

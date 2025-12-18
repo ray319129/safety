@@ -86,7 +86,7 @@ class GPSModule:
             print(f"GPS 讀取錯誤: {e}")
             return None
     
-    def wait_for_fix(self, timeout: int = 30) -> bool:
+    def wait_for_fix(self, timeout: int = 150) -> bool:
         """
         等待 GPS 取得定位
         

@@ -178,7 +178,31 @@ Authorization: Bearer <jwt_token>
 
 ---
 
-### 6. 即時影像串流
+### 6. 一鍵清除所有事故（管理員）
+
+**DELETE** `/api/clear_accidents`
+
+清除所有事故記錄（需要管理員權限），前端「一鍵清理事故列表」按鈕會呼叫此端點。
+
+**Headers:**
+```
+Authorization: Bearer <jwt_token>
+```
+
+**Response (200 OK):**
+```json
+{
+  "deleted": 10,
+  "message": "所有事故已清除"
+}
+```
+
+**Response (401 Unauthorized / 403 Forbidden / 500 Internal Server Error):**
+同 `/api/delete_accident/<accident_id>`。
+
+---
+
+### 7. 即時影像串流
 
 **GET** `/api/video/<device_id>`
 
@@ -203,7 +227,7 @@ GET /api/video/vehicle_001?overlay=true
 
 ---
 
-### 7. 健康檢查
+### 8. 健康檢查
 
 **GET** `/api/health`
 
