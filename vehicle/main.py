@@ -52,8 +52,6 @@ class SafetyVehicle:
             print(f"警告: 無法初始化 BMduino 控制器: {e}")
             self.bm = None
         
-        # 注意：馬達控制已轉移到 BMduino，以下模組保留僅用於向後相容
-        # 實際馬達控制應使用 self.bm.set_motor()
         self.motor = MotorController(
             self.config.MOTOR_LEFT_PWM_PIN,
             self.config.MOTOR_LEFT_IN1_PIN,
@@ -63,8 +61,6 @@ class SafetyVehicle:
             self.config.MOTOR_RIGHT_IN4_PIN
         )
         
-        # 注意：伺服控制已轉移到 BMduino，以下模組保留僅用於向後相容
-        # 實際伺服控制應使用 self.bm.raise_sign() / self.bm.lower_sign()
         self.servo = ServoController(
             self.config.SERVO_1_PIN,
             self.config.SERVO_2_PIN
@@ -72,8 +68,6 @@ class SafetyVehicle:
         self.servo.set_raise_angle(self.config.SERVO_RAISE_ANGLE)
         self.servo.set_lower_angle(self.config.SERVO_LOWER_ANGLE)
         
-        # 注意：警報控制已轉移到 BMduino，以下模組保留僅用於向後相容
-        # 實際警報控制應使用 self.bm.play_alarm()
         self.alarm = AlarmModule(self.config.ALARM_PIN)
         
         # 狀態變數
@@ -275,39 +269,22 @@ class SafetyVehicle:
     
     def avoid_obstacle(self, direction: str):
         """
-        執行避障動作（已廢棄，保留僅用於向後相容）
-        
-        注意：此方法已不再使用，因為移動邏輯已移除
-        如需移動功能，應使用 self.bm.set_motor() 直接控制
+        執行避障動作
         
         Args:
             direction: 避障方向 ('left', 'right')
         """
-        print(f"執行避障動作: {direction}（已廢棄）")
+        print(f"執行避障動作: {direction}")
         
-        # 如果使用 BMduino，可以透過不同速度實現轉向
-        if self.bm is not None:
-            if direction == 'left':
-                # 左轉：左馬達慢，右馬達快（需要韌體支援獨立控制）
-                # 目前 BMduino 韌體是雙馬達同步，所以這裡只做停止
-                self.bm.stop_motor()
-            elif direction == 'right':
-                # 右轉：右馬達慢，左馬達快（需要韌體支援獨立控制）
-                # 目前 BMduino 韌體是雙馬達同步，所以這裡只做停止
-                self.bm.stop_motor()
-        
-        # 舊的 GPIO 控制方式（已廢棄）
-        # self.motor.avoid_obstacle(direction, self.config.MOTOR_SPEED_AVOID)
+        # 執行避障轉向
+        self.motor.avoid_obstacle(direction, self.config.MOTOR_SPEED_AVOID)
         
         # 避障時間（可根據實際情況調整）
         time.sleep(1.0)
         
         # 回歸原路徑（繼續往後移動）
         print("回歸原路徑")
-        if self.bm is not None:
-            self.bm.set_motor('B', self.config.MOTOR_SPEED_NORMAL)
-        # 舊的 GPIO 控制方式（已廢棄）
-        # self.motor.move_backward(self.config.MOTOR_SPEED_NORMAL)
+        self.motor.move_backward(self.config.MOTOR_SPEED_NORMAL)
     
     def run_movement_loop(self):
         """執行移動循環（包含避障）"""
@@ -415,26 +392,66 @@ class SafetyVehicle:
             print("\n上報事故資料（只上報一次）...")
             self.report_accident(has_injured=has_injured)
             
-            # 5. 測試馬達控制（可選，用於確認 BMduino 馬達控制正常）
-            if self.bm is not None:
-                print("\n測試馬達控制（3 秒前進，3 秒後退）...")
-                try:
-                    print("馬達前進（速度 50）...")
-                    self.bm.set_motor('F', 50)
-                    time.sleep(3)
-                    print("馬達停止...")
-                    self.bm.stop_motor()
-                    time.sleep(1)
-                    print("馬達後退（速度 50）...")
-                    self.bm.set_motor('B', 50)
-                    time.sleep(3)
-                    print("馬達停止...")
-                    self.bm.stop_motor()
-                    print("✓ 馬達測試完成")
-                except Exception as e:
-                    print(f"✗ 馬達測試失敗: {e}")
+            # 5. 根據道路類型判斷目標距離並往後移動
+            print("\n判斷道路類型並計算目標距離...")
+            self.target_distance = self.determine_target_distance(speed_limit)
+            print(f"目標距離: {self.target_distance} 公尺")
             
-            # 6. 保持運行狀態，持續提供即時影像串流
+            # 6. 往後移動到目標距離
+            print(f"\n開始往後移動，目標距離: {self.target_distance} 公尺")
+            print("按 Ctrl+C 可隨時停止")
+            
+            if self.bm is not None:
+                # 使用 BMduino 控制馬達後退
+                print("啟動馬達（後退）...")
+                self.bm.set_motor('B', self.config.MOTOR_SPEED_NORMAL)
+            else:
+                print("警告: BMduino 未連接，無法控制馬達")
+            
+            # 監控移動距離
+            last_distance = 0.0
+            last_print_time = time.time()
+            
+            while self.running:
+                # 更新 GPS 距離
+                current_distance = self.gps.get_distance_from_start()
+                
+                # 每 1 秒或每 1 公尺更新一次顯示
+                now = time.time()
+                if now - last_print_time >= 1.0 or abs(current_distance - last_distance) >= 1.0:
+                    print(f"已移動距離: {current_distance:.2f} 公尺 / {self.target_distance} 公尺")
+                    last_distance = current_distance
+                    last_print_time = now
+                
+                # 檢查是否達到目標距離
+                if current_distance >= self.target_distance:
+                    print(f"\n已達到目標距離: {current_distance:.2f} 公尺")
+                    # 停止馬達
+                    if self.bm is not None:
+                        self.bm.stop_motor()
+                    break
+                
+                time.sleep(0.5)  # 每 0.5 秒檢查一次距離
+            
+            # 7. 到達距離後：升起警示牌、播放警報
+            print("\n到達目標距離，觸發警示...")
+            if self.bm is not None:
+                try:
+                    print("升起警示牌...")
+                    self.bm.raise_sign()
+                    time.sleep(1)  # 等待伺服動作完成
+                    
+                    print("播放警示音...")
+                    self.bm.play_alarm(3.0)  # 播放 3 秒
+                    
+                    print("設定 LED 亮度...")
+                    self.bm.set_led_brightness(255)  # 最大亮度
+                except Exception as e:
+                    print(f"警示觸發失敗: {e}")
+            else:
+                print("警告: BMduino 未連接，無法觸發警示")
+            
+            # 8. 保持運行狀態，持續提供即時影像串流
             print("\n系統運行中，持續提供即時影像串流...")
             print("按 Ctrl+C 停止...")
             
