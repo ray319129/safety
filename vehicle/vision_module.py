@@ -39,26 +39,63 @@ class VisionModule:
         
     def initialize_camera(self) -> bool:
         """
-        初始化攝影機
+        初始化攝影機（自動偵測可用裝置）
         
         Returns:
             bool: 初始化是否成功
         """
+        # 先嘗試使用配置的索引
+        if self._try_open_camera(self.camera_index):
+            print(f"攝影機已初始化: {self.camera_index}")
+            return True
+        
+        # 如果預設索引失敗，自動掃描所有可能的 video 裝置（0-31）
+        print(f"無法開啟攝影機 {self.camera_index}，開始自動偵測...")
+        for idx in range(32):
+            if idx == self.camera_index:
+                continue  # 跳過已經嘗試過的索引
+            
+            if self._try_open_camera(idx):
+                self.camera_index = idx  # 更新為找到的索引
+                print(f"攝影機已初始化: {self.camera_index} (自動偵測)")
+                return True
+        
+        print("錯誤: 無法找到可用的攝影機裝置")
+        return False
+    
+    def _try_open_camera(self, index: int) -> bool:
+        """
+        嘗試開啟指定索引的攝影機
+        
+        Args:
+            index: 攝影機索引
+            
+        Returns:
+            bool: 是否成功開啟
+        """
         try:
-            self.cap = cv2.VideoCapture(self.camera_index)
-            if not self.cap.isOpened():
-                print(f"無法開啟攝影機 {self.camera_index}")
+            cap = cv2.VideoCapture(index)
+            if not cap.isOpened():
                 return False
+            
+            # 嘗試讀取一幀來確認攝影機真的可用
+            ret, frame = cap.read()
+            if not ret or frame is None:
+                cap.release()
+                return False
+            
+            # 如果成功，設定為當前使用的攝影機
+            if self.cap:
+                self.cap.release()
+            self.cap = cap
             
             # 設定攝影機參數
             self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
             self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
             self.cap.set(cv2.CAP_PROP_FPS, 30)
             
-            print(f"攝影機已初始化: {self.camera_index}")
             return True
-        except Exception as e:
-            print(f"攝影機初始化失敗: {e}")
+        except Exception:
             return False
     
     def release_camera(self):

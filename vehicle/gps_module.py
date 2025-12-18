@@ -69,16 +69,27 @@ class GPSModule:
         
         try:
             # 讀取 NMEA 資料
-            line = self.serial_connection.readline().decode('utf-8', errors='ignore')
+            line = self.serial_connection.readline().decode('utf-8', errors='ignore').strip()
             
-            if line.startswith('$GPRMC') or line.startswith('$GPGGA'):
-                # 解析 NMEA 訊息
+            if not line:
+                return None
+            
+            # 同時支援 GP/GN 前綴與 RMC/GGA 訊息
+            if line.startswith(('$GPRMC', '$GNRMC', '$GPGGA', '$GNGGA')):
                 msg = pynmea2.parse(line)
+
+                # 如果是 RMC 訊息，檢查狀態（A=有效，V=無效）
+                if hasattr(msg, 'status') and msg.status != 'A':
+                    # 例如你現在看到的 $GNRMC,,V,... → 代表尚未定位成功
+                    return None
                 
                 if hasattr(msg, 'latitude') and hasattr(msg, 'longitude'):
-                    if msg.latitude != 0.0 and msg.longitude != 0.0:
-                        self.current_latitude = msg.latitude
-                        self.current_longitude = msg.longitude
+                    lat = msg.latitude
+                    lon = msg.longitude
+                    # 過濾 0,0 假定位
+                    if lat and lon and (lat != 0.0 or lon != 0.0):
+                        self.current_latitude = lat
+                        self.current_longitude = lon
                         return (self.current_latitude, self.current_longitude)
             
             return None
