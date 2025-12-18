@@ -57,7 +57,7 @@ class VehicleConfig:
     WEB_API_HOST = os.getenv('WEB_API_HOST', '0.0.0.0')
     WEB_API_PORT = int(os.getenv('WEB_API_PORT', '8080'))
 
-    # BMduino 序列連線配置
-    BMDUINO_PORT = os.getenv('BMDUINO_PORT', '/dev/ttyACM0')
-    BMDUINO_BAUDRATE = int(os.getenv('BMDUINO_BAUDRATE', '115200'))
+    # BMduino UART 序列連線配置（硬體序列埠）
+    BMDUINO_PORT = os.getenv('BMDUINO_PORT', '/dev/serial0')
+    BMDUINO_BAUDRATE = int(os.getenv('BMDUINO_BAUDRATE', '9600'))
 

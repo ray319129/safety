@@ -6,7 +6,7 @@
  * - 透過序列埠接收指令控制馬達、伺服、警報、LED
  * - 讀取光感測值並自動調整 LED 亮度
  * 
- * 通訊協定（115200 baud）：
+ * 通訊協定（9600 baud，UART 硬體序列埠）：
  * - M F <speed>  : 馬達前進，速度 0-100
  * - M B <speed>  : 馬達後退，速度 0-100
  * - M S 0        : 馬達停止
@@ -57,8 +57,8 @@ bool autoBrightness = false; // 是否啟用自動亮度
 
 // ===== 設定 =====
 void setup() {
-  // 初始化序列埠
-  Serial.begin(115200);
+  // 初始化序列埠（UART 硬體序列埠，9600 baud）
+  Serial.begin(9600);
   Serial.setTimeout(100);
   
   // 等待序列埠就緒
