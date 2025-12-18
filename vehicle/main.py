@@ -141,8 +141,8 @@ class SafetyVehicle:
         if not self.gps.connect():
             print("警告: GPS 連接失敗，將使用模擬模式")
         else:
-            # 將 GPS 定位等待時間延長至 150 秒，以提高首次定位成功率
-            if not self.gps.wait_for_fix(timeout=150):
+            # 將 GPS 定位等待時間延長至 300 秒，以提高首次定位成功率
+            if not self.gps.wait_for_fix(timeout=300):
                 print("警告: GPS 定位失敗，將使用模擬模式")
         
         # 初始化視覺辨識

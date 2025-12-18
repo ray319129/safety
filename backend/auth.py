@@ -91,6 +91,10 @@ def admin_required(f):
     """
     @wraps(f)
     def decorated_function(*args, **kwargs):
+        # CORS 預檢請求（OPTIONS）不做驗證，直接放行，避免前端預檢失敗
+        if request.method == 'OPTIONS':
+            return jsonify({'status': 'ok'}), 200
+        
         # 從 Header 取得 Token
         auth_header = request.headers.get('Authorization')
         
