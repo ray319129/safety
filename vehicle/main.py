@@ -211,9 +211,12 @@ class SafetyVehicle:
             self.gps.last_position = (25.0330, 121.5654)
             return True
     
-    def report_accident(self, injured_count: int = 0) -> bool:
+    def report_accident(self, has_injured: bool = False) -> bool:
         """
-        上報事故資料到後端
+        上報事故資料到後端（只上報一次）
+        
+        Args:
+            has_injured: 是否有民眾受傷（偵測到人形為 True）
         
         Returns:
             bool: 是否成功上報
@@ -240,8 +243,8 @@ class SafetyVehicle:
             'timestamp': time.time(),
             'image': image_data,
             'device_id': 'vehicle_001',
-            # 受傷人數（由視覺模組偵測到的人形數量）
-            'injured_count': max(0, int(injured_count))
+            # 是否有民眾受傷（偵測到人形為 True）
+            'has_injured': bool(has_injured)
         }
         
         try:
@@ -348,39 +351,52 @@ class SafetyVehicle:
                 print("無法設定事故位置")
                 return
             
-            # 3. 程式啟動後立即上報一次事故（受傷人數 0）
-            print("\n程式啟動，立即上報初始事故（injured_count=0）...")
-            self.report_accident(injured_count=0)
+            # 3. 偵測是否有民眾受傷，然後上報一次事故
+            print("\n偵測是否有民眾受傷...")
+            has_injured = False
             
-            # 4. 進入偵測人形的監控迴圈
-            print("\n開始人體偵測監控，偵測到人時會再次上報事故...")
-            self.running = True
-            last_report_time = 0.0
-            report_interval = 10.0  # 至少間隔 10 秒再上報一次，避免過於頻繁
+            # 連續偵測 3 秒，確認是否有民眾受傷
+            detection_start = time.time()
+            detection_duration = 3.0
+            detection_count = 0
+            total_detections = 0
             
-            while self.running:
+            while time.time() - detection_start < detection_duration:
                 result = self.vision.get_frame_with_detections()
                 if result is not None:
-                    # frame 目前僅用於即時影像串流疊加，這裡只需要人物列表計算人數
                     _, people = result
-                    injured_count = len(people)
-                    
-                    if injured_count > 0:
-                        now = time.time()
-                        if now - last_report_time >= report_interval:
-                            print(f"偵測到人形 {injured_count} 個，進行事故上報...")
-                            self.report_accident(injured_count=injured_count)
-                            last_report_time = now
-                            
-                            # 透過 BMduino 觸發實體警示（若可用）
-                            if self.bm is not None:
-                                try:
-                                    self.bm.raise_sign()
-                                    self.bm.play_alarm(3.0)
-                                    self.bm.set_led_brightness(255)
-                                except Exception as e:
-                                    print(f"BMduino 警示觸發失敗: {e}")
-                time.sleep(0.2)
+                    if len(people) > 0:
+                        total_detections += len(people)
+                        detection_count += 1
+                time.sleep(0.1)
+            
+            # 如果超過一半的時間都偵測到人，判定為有民眾受傷
+            if detection_count > (detection_duration * 10 * 0.5):
+                has_injured = True
+                print(f"偵測到民眾受傷（{detection_count} 次偵測到人形）")
+                
+                # 透過 BMduino 觸發實體警示
+                if self.bm is not None:
+                    print("觸發 BMduino 警示...")
+                    try:
+                        self.bm.raise_sign()
+                        self.bm.play_alarm(3.0)
+                        self.bm.set_led_brightness(255)
+                    except Exception as e:
+                        print(f"BMduino 警示觸發失敗: {e}")
+            else:
+                print("未偵測到民眾受傷")
+            
+            # 4. 上報一次事故（包含是否有民眾受傷的資訊）
+            print("\n上報事故資料（只上報一次）...")
+            self.report_accident(has_injured=has_injured)
+            
+            # 5. 保持運行狀態，持續提供即時影像串流
+            print("\n系統運行中，持續提供即時影像串流...")
+            print("按 Ctrl+C 停止...")
+            
+            while self.running:
+                time.sleep(1)
                 
         except KeyboardInterrupt:
             print("\n使用者中斷")

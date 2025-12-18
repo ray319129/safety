@@ -53,8 +53,12 @@
   "timestamp": 1234567890,
   "image": "base64_encoded_image_string",
   "device_id": "vehicle_001",
-  "injured_count": 1
+  "has_injured": false
 }
+```
+
+**欄位說明：**
+- `has_injured` (boolean, 可選): 是否有民眾受傷，預設 `false`
 ```
 
 **Response (200 OK):**
@@ -259,7 +263,7 @@ GET /api/video/vehicle_001?overlay=true
   "timestamp": 1234567890,
   "image": "base64_encoded_string",
   "device_id": "vehicle_001",
-  "injured_count": 1,
+  "has_injured": false,
   "status": "active",
   "created_at": 1234567890,
   "updated_at": 1234567890
