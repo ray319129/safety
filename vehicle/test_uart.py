@@ -18,16 +18,6 @@ try:
     print("停止馬達")
     ser.write(b'M S 0\n')
     
-    # 查詢光感測
-    print("查詢光感測值")
-    ser.write(b'Q L\n')
-    time.sleep(0.5)
-    
-    # 讀取回應
-    if ser.in_waiting > 0:
-        response = ser.readline().decode('utf-8').strip()
-        print(f"BMduino 回應: {response}")
-    
     ser.close()
     print("測試完成！")
     

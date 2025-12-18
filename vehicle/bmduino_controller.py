@@ -1,6 +1,6 @@
 """
 BMduino 控制模組
-透過序列埠與 BMduino-UNO 通訊，控制馬達、伺服、警報與 LED，並讀取光感測值。
+透過序列埠與 BMduino-UNO 通訊，控制馬達、伺服、警報與 LED。
 """
 
 import time
@@ -20,7 +20,6 @@ class BMduinoController:
     - `S D`     : 伺服放下警示牌 (Sign Down)
     - `A P 3`   : 播放警報 3 秒
     - `L S 128` : 設定 LED 亮度 0–255
-    - `Q L`     : 查詢光感測值，BMduino 回傳 `L <value>`
     """
 
     def __init__(self, port: str, baudrate: int = 9600, timeout: float = 1.0) -> None:
@@ -109,25 +108,6 @@ class BMduinoController:
         """設定 LED 亮度 (0–255)。"""
         value = max(0, min(255, int(value)))
         self._send_command(f"L S {value}")
-
-    def read_light_level(self) -> Optional[int]:
-        """讀取光感測 ADC 數值。
-
-        Returns:
-            整數光照值，或 None 代表讀取失敗
-        """
-        resp = self._send_command("Q L", expect_response=True)
-        if not resp:
-            return None
-
-        # 預期格式: "L 523"
-        parts = resp.split()
-        if len(parts) == 2 and parts[0].upper() == "L":
-            try:
-                return int(parts[1])
-            except ValueError:
-                return None
-        return None
 
     def close(self) -> None:
         """關閉序列連線。"""

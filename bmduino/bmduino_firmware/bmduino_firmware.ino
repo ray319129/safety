@@ -4,7 +4,6 @@
  * 
  * 功能：
  * - 透過序列埠接收指令控制馬達、伺服、警報、LED
- * - 讀取光感測值並自動調整 LED 亮度
  * 
  * 通訊協定（9600 baud，UART 硬體序列埠）：
  * - M F <speed>  : 馬達前進，速度 0-100
@@ -14,7 +13,6 @@
  * - S D          : 伺服放下警示牌
  * - A P <secs>   : 播放警報（秒數）
  * - L S <value>  : 設定 LED 亮度 0-255
- * - Q L          : 查詢光感測值（回傳 "L <value>"）
  */
 
 // ===== 腳位定義（根據 BM53A367A 手冊，Arduino UNO 相容腳位）=====
@@ -39,9 +37,6 @@
 // LED 燈條（透過 MOSFET 控制）
 #define LED_PIN         12  // D12 (PWM)
 
-// 光感測模組（類比輸入）
-#define LIGHT_SENSOR_PIN A0 // A0
-
 // ===== 全域變數 =====
 String inputString = "";      // 接收序列埠字串
 boolean stringComplete = false; // 是否收到完整指令
@@ -49,11 +44,6 @@ boolean stringComplete = false; // 是否收到完整指令
 // 伺服角度設定
 int servo1_angle = 0;  // 0-180
 int servo2_angle = 0;  // 0-180
-
-// LED 自動亮度控制
-unsigned long lastLightRead = 0;
-const unsigned long LIGHT_READ_INTERVAL = 100; // 每 100ms 讀取一次光感測
-bool autoBrightness = false; // 是否啟用自動亮度
 
 // ===== 設定 =====
 void setup() {
@@ -84,9 +74,6 @@ void setup() {
   pinMode(LED_PIN, OUTPUT);
   analogWrite(LED_PIN, 0);
   
-  // 設定光感測為輸入
-  pinMode(LIGHT_SENSOR_PIN, INPUT);
-  
   // 初始化馬達為停止狀態
   stopMotor();
   
@@ -98,7 +85,7 @@ void setup() {
   inputString.reserve(32);
   
   Serial.println("BMduino Ready");
-  Serial.println("Commands: M F/B/S <speed>, S U/D, A P <secs>, L S <value>, Q L");
+  Serial.println("Commands: M F/B/S <speed>, S U/D, A P <secs>, L S <value>");
 }
 
 // ===== 主迴圈 =====
@@ -108,15 +95,6 @@ void loop() {
     processCommand(inputString);
     inputString = "";
     stringComplete = false;
-  }
-  
-  // 自動讀取光感測並調整 LED 亮度（如果啟用）
-  if (autoBrightness) {
-    unsigned long now = millis();
-    if (now - lastLightRead >= LIGHT_READ_INTERVAL) {
-      adjustLEDByLight();
-      lastLightRead = now;
-    }
   }
   
   delay(10);
@@ -181,15 +159,6 @@ void processCommand(String cmd) {
     if (param1 == "S") {
       int brightness = param2.toInt();
       setLEDBrightness(brightness);
-      autoBrightness = false; // 手動設定時關閉自動亮度
-    }
-  }
-  // 查詢光感測: Q L
-  else if (cmdType == "Q") {
-    if (param1 == "L") {
-      int lightValue = analogRead(LIGHT_SENSOR_PIN);
-      Serial.print("L ");
-      Serial.println(lightValue);
     }
   }
 }
@@ -274,18 +243,6 @@ void playAlarm(int duration) {
 // ===== LED 控制 =====
 void setLEDBrightness(int brightness) {
   brightness = constrain(brightness, 0, 255);
-  analogWrite(LED_PIN, brightness);
-}
-
-// ===== 光感測自動亮度 =====
-void adjustLEDByLight() {
-  int lightValue = analogRead(LIGHT_SENSOR_PIN);
-  
-  // 映射光感測值到 LED 亮度（越暗越亮）
-  // 假設光感測值範圍 0-1023（10-bit ADC）
-  int brightness = map(lightValue, 0, 1023, 255, 0); // 反向映射
-  brightness = constrain(brightness, 0, 255);
-  
   analogWrite(LED_PIN, brightness);
 }
 
