@@ -23,7 +23,7 @@ class BMduinoController:
     - `Q L`     : 查詢光感測值，BMduino 回傳 `L <value>`
     """
 
-    def __init__(self, port: str, baudrate: int = 115200, timeout: float = 1.0) -> None:
+    def __init__(self, port: str, baudrate: int = 9600, timeout: float = 1.0) -> None:
         self.port = port
         self.baudrate = baudrate
         self.timeout = timeout
