@@ -74,9 +74,9 @@ def verify_token(token: str) -> dict:
     try:
         payload = pyjwt.decode(token, config.JWT_SECRET, algorithms=[config.JWT_ALGORITHM])
         return payload
-    except pyjwt.ExpiredSignatureError:
+    except ExpiredSignatureError:
         return None
-    except pyjwt.InvalidTokenError:
+    except InvalidTokenError:
         return None
 
 def admin_required(f):

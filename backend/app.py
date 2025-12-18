@@ -200,9 +200,8 @@ def api_video(device_id):
     """
     overlay = request.args.get('overlay', 'false').lower() == 'true'
     
-    # 這裡應該從車載端取得影像串流
-    # 假設車載端在 http://vehicle_ip:8080/video_stream
-    vehicle_url = f'http://localhost:8080/video_stream?overlay={str(overlay).lower()}'
+    # 從車載端取得影像串流
+    vehicle_url = f'http://{config.VEHICLE_HOST}:{config.VEHICLE_PORT}/video_stream?overlay={str(overlay).lower()}'
     
     try:
         # 代理影像串流

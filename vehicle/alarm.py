@@ -62,8 +62,21 @@ class AlarmModule:
                 time.sleep(interval)
     
     def cleanup(self):
-        """清理 GPIO 資源"""
-        GPIO.output(self.alarm_pin, GPIO.LOW)
-        GPIO.cleanup()
+        """清理 GPIO 資源（只清理本模組，不調用 GPIO.cleanup）"""
+        try:
+            # 確保 GPIO mode 已設定
+            GPIO.setmode(GPIO.BCM)
+            GPIO.setwarnings(False)
+            GPIO.setup(self.alarm_pin, GPIO.OUT)
+            GPIO.output(self.alarm_pin, GPIO.LOW)
+        except RuntimeError:
+            # 如果 GPIO 已被清理，則重新設定
+            GPIO.setmode(GPIO.BCM)
+            GPIO.setwarnings(False)
+            GPIO.setup(self.alarm_pin, GPIO.OUT)
+            GPIO.output(self.alarm_pin, GPIO.LOW)
+        except Exception as e:
+            # 其他錯誤則忽略
+            pass
         print("警示音模組已清理")
 

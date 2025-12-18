@@ -12,10 +12,21 @@ from config import VehicleConfig
 app = Flask(__name__)
 config = VehicleConfig()
 vision = None
+vision_module_instance = None  # 儲存主程式中的 vision 實例
+
+def set_vision_instance(vision_instance):
+    """設定視覺辨識模組實例（由主程式傳入）"""
+    global vision_module_instance
+    vision_module_instance = vision_instance
 
 def initialize_vision():
     """初始化視覺辨識模組"""
     global vision
+    # 優先使用主程式傳入的實例
+    if vision_module_instance is not None:
+        return vision_module_instance
+    
+    # 如果沒有傳入實例，則建立新的
     if vision is None:
         vision = VisionModule(
             config.CAMERA_INDEX,

@@ -56,6 +56,14 @@ class ServoController:
             servo_num: 伺服編號 (1 或 2)
             angle: 角度 (0-180)
         """
+        try:
+            # 確保 GPIO mode 已設定
+            GPIO.setmode(GPIO.BCM)
+            GPIO.setwarnings(False)
+        except RuntimeError:
+            # 如果已經設定過，則忽略
+            pass
+        
         # 限制角度範圍
         angle = max(self.min_angle, min(self.max_angle, angle))
         
@@ -66,10 +74,27 @@ class ServoController:
         # 180 度 = 12.5% duty cycle
         duty_cycle = 2.5 + (angle / 180.0) * 10.0
         
-        if servo_num == 1:
-            self.servo1_pwm.ChangeDutyCycle(duty_cycle)
-        elif servo_num == 2:
-            self.servo2_pwm.ChangeDutyCycle(duty_cycle)
+        try:
+            if servo_num == 1:
+                self.servo1_pwm.ChangeDutyCycle(duty_cycle)
+            elif servo_num == 2:
+                self.servo2_pwm.ChangeDutyCycle(duty_cycle)
+        except RuntimeError:
+            # 如果 GPIO 已被清理，重新設定
+            GPIO.setmode(GPIO.BCM)
+            GPIO.setwarnings(False)
+            GPIO.setup(self.servo1_pin, GPIO.OUT)
+            GPIO.setup(self.servo2_pin, GPIO.OUT)
+            # 重新建立 PWM 物件
+            self.servo1_pwm = GPIO.PWM(self.servo1_pin, self.frequency)
+            self.servo2_pwm = GPIO.PWM(self.servo2_pin, self.frequency)
+            self.servo1_pwm.start(0)
+            self.servo2_pwm.start(0)
+            # 重新執行操作
+            if servo_num == 1:
+                self.servo1_pwm.ChangeDutyCycle(duty_cycle)
+            elif servo_num == 2:
+                self.servo2_pwm.ChangeDutyCycle(duty_cycle)
         
         # 等待伺服轉動
         time.sleep(0.3)
@@ -107,9 +132,13 @@ class ServoController:
         print("警示牌已降下")
     
     def cleanup(self):
-        """清理 GPIO 資源"""
-        self.servo1_pwm.stop()
-        self.servo2_pwm.stop()
-        GPIO.cleanup()
+        """清理 GPIO 資源（只清理本模組，不調用 GPIO.cleanup）"""
+        try:
+            # 停止 PWM
+            self.servo1_pwm.stop()
+            self.servo2_pwm.stop()
+        except Exception:
+            # 如果 PWM 已被停止，則忽略錯誤
+            pass
         print("伺服控制器已清理")
 

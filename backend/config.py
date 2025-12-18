@@ -36,4 +36,8 @@ class BackendConfig:
     # Ngrok 配置
     NGROK_AUTH_TOKEN = os.getenv('NGROK_AUTH_TOKEN', '')
     NGROK_DOMAIN = os.getenv('NGROK_DOMAIN', '')
+    
+    # 車載端配置（影像串流）
+    VEHICLE_HOST = os.getenv('VEHICLE_HOST', 'localhost')
+    VEHICLE_PORT = int(os.getenv('VEHICLE_PORT', '8080'))
 

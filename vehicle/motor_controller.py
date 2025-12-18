@@ -69,20 +69,48 @@ class MotorController:
             direction: 方向 ('forward', 'backward', 'stop')
             speed: 速度 (0-100)
         """
+        try:
+            # 確保 GPIO mode 已設定
+            GPIO.setmode(GPIO.BCM)
+            GPIO.setwarnings(False)
+        except RuntimeError:
+            # 如果已經設定過，則忽略
+            pass
+        
         speed = max(0, min(100, speed))  # 限制速度範圍
         
-        if direction == 'forward':
-            GPIO.output(self.left_in1_pin, GPIO.HIGH)
-            GPIO.output(self.left_in2_pin, GPIO.LOW)
-            self.left_pwm.ChangeDutyCycle(speed)
-        elif direction == 'backward':
-            GPIO.output(self.left_in1_pin, GPIO.LOW)
-            GPIO.output(self.left_in2_pin, GPIO.HIGH)
-            self.left_pwm.ChangeDutyCycle(speed)
-        else:  # stop
-            GPIO.output(self.left_in1_pin, GPIO.LOW)
-            GPIO.output(self.left_in2_pin, GPIO.LOW)
-            self.left_pwm.ChangeDutyCycle(0)
+        try:
+            if direction == 'forward':
+                GPIO.output(self.left_in1_pin, GPIO.HIGH)
+                GPIO.output(self.left_in2_pin, GPIO.LOW)
+                self.left_pwm.ChangeDutyCycle(speed)
+            elif direction == 'backward':
+                GPIO.output(self.left_in1_pin, GPIO.LOW)
+                GPIO.output(self.left_in2_pin, GPIO.HIGH)
+                self.left_pwm.ChangeDutyCycle(speed)
+            else:  # stop
+                GPIO.output(self.left_in1_pin, GPIO.LOW)
+                GPIO.output(self.left_in2_pin, GPIO.LOW)
+                self.left_pwm.ChangeDutyCycle(0)
+        except RuntimeError:
+            # 如果 GPIO 已被清理，重新設定
+            GPIO.setmode(GPIO.BCM)
+            GPIO.setwarnings(False)
+            GPIO.setup(self.left_in1_pin, GPIO.OUT)
+            GPIO.setup(self.left_in2_pin, GPIO.OUT)
+            # 重新執行操作
+            if direction == 'forward':
+                GPIO.output(self.left_in1_pin, GPIO.HIGH)
+                GPIO.output(self.left_in2_pin, GPIO.LOW)
+                self.left_pwm.ChangeDutyCycle(speed)
+            elif direction == 'backward':
+                GPIO.output(self.left_in1_pin, GPIO.LOW)
+                GPIO.output(self.left_in2_pin, GPIO.HIGH)
+                self.left_pwm.ChangeDutyCycle(speed)
+            else:  # stop
+                GPIO.output(self.left_in1_pin, GPIO.LOW)
+                GPIO.output(self.left_in2_pin, GPIO.LOW)
+                self.left_pwm.ChangeDutyCycle(0)
     
     def set_right_motor(self, direction: Literal['forward', 'backward', 'stop'], speed: int = 60):
         """
@@ -92,20 +120,48 @@ class MotorController:
             direction: 方向 ('forward', 'backward', 'stop')
             speed: 速度 (0-100)
         """
+        try:
+            # 確保 GPIO mode 已設定
+            GPIO.setmode(GPIO.BCM)
+            GPIO.setwarnings(False)
+        except RuntimeError:
+            # 如果已經設定過，則忽略
+            pass
+        
         speed = max(0, min(100, speed))  # 限制速度範圍
         
-        if direction == 'forward':
-            GPIO.output(self.right_in3_pin, GPIO.HIGH)
-            GPIO.output(self.right_in4_pin, GPIO.LOW)
-            self.right_pwm.ChangeDutyCycle(speed)
-        elif direction == 'backward':
-            GPIO.output(self.right_in3_pin, GPIO.LOW)
-            GPIO.output(self.right_in4_pin, GPIO.HIGH)
-            self.right_pwm.ChangeDutyCycle(speed)
-        else:  # stop
-            GPIO.output(self.right_in3_pin, GPIO.LOW)
-            GPIO.output(self.right_in4_pin, GPIO.LOW)
-            self.right_pwm.ChangeDutyCycle(0)
+        try:
+            if direction == 'forward':
+                GPIO.output(self.right_in3_pin, GPIO.HIGH)
+                GPIO.output(self.right_in4_pin, GPIO.LOW)
+                self.right_pwm.ChangeDutyCycle(speed)
+            elif direction == 'backward':
+                GPIO.output(self.right_in3_pin, GPIO.LOW)
+                GPIO.output(self.right_in4_pin, GPIO.HIGH)
+                self.right_pwm.ChangeDutyCycle(speed)
+            else:  # stop
+                GPIO.output(self.right_in3_pin, GPIO.LOW)
+                GPIO.output(self.right_in4_pin, GPIO.LOW)
+                self.right_pwm.ChangeDutyCycle(0)
+        except RuntimeError:
+            # 如果 GPIO 已被清理，重新設定
+            GPIO.setmode(GPIO.BCM)
+            GPIO.setwarnings(False)
+            GPIO.setup(self.right_in3_pin, GPIO.OUT)
+            GPIO.setup(self.right_in4_pin, GPIO.OUT)
+            # 重新執行操作
+            if direction == 'forward':
+                GPIO.output(self.right_in3_pin, GPIO.HIGH)
+                GPIO.output(self.right_in4_pin, GPIO.LOW)
+                self.right_pwm.ChangeDutyCycle(speed)
+            elif direction == 'backward':
+                GPIO.output(self.right_in3_pin, GPIO.LOW)
+                GPIO.output(self.right_in4_pin, GPIO.HIGH)
+                self.right_pwm.ChangeDutyCycle(speed)
+            else:  # stop
+                GPIO.output(self.right_in3_pin, GPIO.LOW)
+                GPIO.output(self.right_in4_pin, GPIO.LOW)
+                self.right_pwm.ChangeDutyCycle(0)
     
     def move_forward(self, speed: int = 60):
         """
@@ -169,8 +225,35 @@ class MotorController:
     
     def stop(self):
         """停止所有馬達"""
-        self.set_left_motor('stop')
-        self.set_right_motor('stop')
+        try:
+            # 確保 GPIO mode 已設定
+            GPIO.setmode(GPIO.BCM)
+            GPIO.setwarnings(False)
+            self.set_left_motor('stop')
+            self.set_right_motor('stop')
+        except RuntimeError:
+            # 如果 GPIO 已被清理，重新設定並停止馬達
+            GPIO.setmode(GPIO.BCM)
+            GPIO.setwarnings(False)
+            # 重新設定 GPIO 腳位
+            GPIO.setup(self.left_in1_pin, GPIO.OUT)
+            GPIO.setup(self.left_in2_pin, GPIO.OUT)
+            GPIO.setup(self.right_in3_pin, GPIO.OUT)
+            GPIO.setup(self.right_in4_pin, GPIO.OUT)
+            # 設定為停止狀態
+            GPIO.output(self.left_in1_pin, GPIO.LOW)
+            GPIO.output(self.left_in2_pin, GPIO.LOW)
+            GPIO.output(self.right_in3_pin, GPIO.LOW)
+            GPIO.output(self.right_in4_pin, GPIO.LOW)
+            # 停止 PWM
+            try:
+                self.left_pwm.ChangeDutyCycle(0)
+                self.right_pwm.ChangeDutyCycle(0)
+            except Exception:
+                pass
+        except Exception:
+            # 其他錯誤則忽略
+            pass
     
     def avoid_obstacle(self, direction: Literal['left', 'right'], speed: int = 50):
         """
@@ -188,10 +271,15 @@ class MotorController:
             self.turn_right_soft(speed)
     
     def cleanup(self):
-        """清理 GPIO 資源"""
-        self.stop()
-        self.left_pwm.stop()
-        self.right_pwm.stop()
-        GPIO.cleanup()
+        """清理 GPIO 資源（只清理本模組，不調用 GPIO.cleanup）"""
+        try:
+            # 停止馬達
+            self.stop()
+            # 停止 PWM
+            self.left_pwm.stop()
+            self.right_pwm.stop()
+        except Exception:
+            # 如果 PWM 已被停止，則忽略錯誤
+            pass
         print("馬達控制器已清理")
 
