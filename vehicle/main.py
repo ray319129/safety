@@ -16,7 +16,6 @@ from config import VehicleConfig
 from gps_module import GPSModule
 from vision_module import VisionModule
 from motor_controller import MotorController
-from servo_controller import ServoController
 from alarm import AlarmModule
 from web_api import run_web_api
 from bmduino_controller import BMduinoController
@@ -61,12 +60,8 @@ class SafetyVehicle:
             self.config.MOTOR_RIGHT_IN4_PIN
         )
         
-        self.servo = ServoController(
-            self.config.SERVO_1_PIN,
-            self.config.SERVO_2_PIN
-        )
-        self.servo.set_raise_angle(self.config.SERVO_RAISE_ANGLE)
-        self.servo.set_lower_angle(self.config.SERVO_LOWER_ANGLE)
+        # 注意：伺服馬達現在由 BMduino 控制，不再使用 ServoController
+        # 伺服控制透過 self.bm.raise_sign() 和 self.bm.lower_sign() 執行
         
         self.alarm = AlarmModule(self.config.ALARM_PIN)
         
@@ -487,7 +482,7 @@ class SafetyVehicle:
         # 若仍在使用樹莓派 GPIO 控制，可保留原本的清理邏輯
         try:
             self.motor.cleanup()
-            self.servo.cleanup()
+            # 注意：伺服馬達由 BMduino 控制，不需要清理 ServoController
             self.alarm.cleanup()
         except Exception:
             pass
