@@ -27,9 +27,9 @@
 #define MOTOR_RIGHT_IN4 11  // D11 (PWM)
 #define MOTOR_RIGHT_ENB  3  // D3 (PWM)
 
-// 伺服馬達（360度伺服，使用 PWM）
-#define SERVO_1_PIN     4   // D4 (PWM)
-#define SERVO_2_PIN     7   // D7 (PWM)
+// 伺服馬達（標準 180度伺服，如 MG90S，使用 50Hz PWM）
+#define SERVO_1_PIN     4   // D4
+#define SERVO_2_PIN     7   // D7
 
 // ISD1820 警報模組
 #define ALARM_PIN       8   // D8
@@ -44,6 +44,10 @@ boolean stringComplete = false; // 是否收到完整指令
 // 伺服角度設定
 int servo1_angle = 0;  // 0-180
 int servo2_angle = 0;  // 0-180
+
+// PWM 控制變數
+unsigned long lastServoUpdate = 0;
+const unsigned long SERVO_PULSE_INTERVAL = 20; // 50Hz = 20ms 週期
 
 // ===== 設定 =====
 void setup() {
@@ -62,9 +66,11 @@ void setup() {
   pinMode(MOTOR_RIGHT_IN4, OUTPUT);
   pinMode(MOTOR_RIGHT_ENB, OUTPUT);
   
-  // 設定伺服腳位為輸出（PWM）
+  // 設定伺服腳位為輸出
   pinMode(SERVO_1_PIN, OUTPUT);
   pinMode(SERVO_2_PIN, OUTPUT);
+  digitalWrite(SERVO_1_PIN, LOW);
+  digitalWrite(SERVO_2_PIN, LOW);
   
   // 設定警報腳位為輸出
   pinMode(ALARM_PIN, OUTPUT);
@@ -97,7 +103,14 @@ void loop() {
     stringComplete = false;
   }
   
-  delay(10);
+  // 持續產生伺服 PWM 訊號（50Hz，每 20ms 一次）
+  unsigned long now = millis();
+  if (now - lastServoUpdate >= SERVO_PULSE_INTERVAL) {
+    updateServoPWM();
+    lastServoUpdate = now;
+  }
+  
+  delay(1); // 減少延遲，讓 PWM 更穩定
 }
 
 // ===== 序列埠接收 =====
@@ -197,37 +210,60 @@ void stopMotor() {
 }
 
 // ===== 伺服控制 =====
+// MG90S 標準伺服控制規格：
+// - 50Hz PWM（20ms 週期）
+// - 0.5ms 脈衝 = 0 度
+// - 1.5ms 脈衝 = 90 度
+// - 2.5ms 脈衝 = 180 度
+
 void setServoAngle(int servoNum, int angle) {
   angle = constrain(angle, 0, 180);
   
-  // 計算 PWM duty cycle（50Hz，0度=2.5%，180度=12.5%）
-  // 對於 Arduino，使用 analogWrite 模擬 PWM（但頻率可能不是 50Hz）
-  // 建議使用 Servo 函式庫，這裡使用簡化版本
-  
-  int pin = (servoNum == 1) ? SERVO_1_PIN : SERVO_2_PIN;
-  
-  // 簡化版本：使用 analogWrite（實際應用建議使用 Servo 函式庫）
-  // 注意：這只是近似，實際應使用正確的 50Hz PWM
-  int pwmValue = map(angle, 0, 180, 25, 125); // 約 2.5% 到 12.5% 的 duty cycle
-  analogWrite(pin, pwmValue);
-  
   if (servoNum == 1) {
     servo1_angle = angle;
-  } else {
+  } else if (servoNum == 2) {
     servo2_angle = angle;
   }
+}
+
+// 更新伺服 PWM 訊號（在 loop() 中每 20ms 呼叫一次）
+void updateServoPWM() {
+  // 計算脈衝寬度（微秒）
+  // 角度 0-180 對應脈衝 500-2500 微秒
+  int pulse1 = map(servo1_angle, 0, 180, 500, 2500);
+  int pulse2 = map(servo2_angle, 0, 180, 500, 2500);
   
-  delay(300); // 等待伺服轉動
+  // 產生 PWM 脈衝
+  // 伺服 1
+  digitalWrite(SERVO_1_PIN, HIGH);
+  delayMicroseconds(pulse1);
+  digitalWrite(SERVO_1_PIN, LOW);
+  
+  // 伺服 2
+  digitalWrite(SERVO_2_PIN, HIGH);
+  delayMicroseconds(pulse2);
+  digitalWrite(SERVO_2_PIN, LOW);
+  
+  // 剩餘時間保持 LOW（總週期 20ms）
+  // 注意：如果兩個脈衝總時間超過 20ms，需要調整
+  unsigned long totalPulse = pulse1 + pulse2;
+  if (totalPulse < 20000) {
+    delayMicroseconds(20000 - totalPulse);
+  }
 }
 
 void raiseSign() {
-  setServoAngle(1, 90);  // 升起角度
+  setServoAngle(1, 90);  // 升起角度（90度）
   setServoAngle(2, 90);
+  // 等待伺服轉動（PWM 會在 loop() 中持續產生）
+  delay(500);
 }
 
 void lowerSign() {
-  setServoAngle(1, 0);   // 降下角度
+  setServoAngle(1, 0);   // 降下角度（0度）
   setServoAngle(2, 0);
+  // 等待伺服轉動（PWM 會在 loop() 中持續產生）
+  delay(500);
 }
 
 // ===== 警報控制 =====
